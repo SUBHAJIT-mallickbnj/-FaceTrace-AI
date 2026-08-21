@@ -1,4 +1,5 @@
 import json
+import math
 from functools import lru_cache
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -78,6 +79,40 @@ def get_case_map_location(
         if coordinates:
             return coordinates, location_text or candidate or "Unknown"
     return get_city_coordinates("Unknown"), location_text or city or "Unknown"
+
+
+def separate_overlapping_coordinate(coords, seen_coordinates: dict):
+    """Keep cases at the same city visible while preserving their exact tooltip."""
+    key = (round(coords[0], 5), round(coords[1], 5))
+    occurrence = seen_coordinates.get(key, 0)
+    seen_coordinates[key] = occurrence + 1
+    if occurrence == 0:
+        return coords
+    ring_position = occurrence - 1
+    ring_size = 6
+    ring = ring_position // ring_size + 1
+    position = ring_position % ring_size
+    angle = 2 * math.pi * position / ring_size
+    offset = 0.025 * ring
+    return coords[0] + offset * math.sin(angle), coords[1] + offset * math.cos(angle)
+
+
+def resolve_case_map_coordinate(
+    city: str | None,
+    last_seen: str | None,
+    address: str | None,
+    latitude: float | None = None,
+    longitude: float | None = None,
+):
+    """Return a finite coordinate for every case, using geocoding before city fallback."""
+    if (
+        latitude is not None
+        and longitude is not None
+        and math.isfinite(float(latitude))
+        and math.isfinite(float(longitude))
+    ):
+        return float(latitude), float(longitude)
+    return geocode_location(city, last_seen, address)
 
 
 @lru_cache(maxsize=256)

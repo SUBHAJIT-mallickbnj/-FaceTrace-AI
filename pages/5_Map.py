@@ -3,7 +3,10 @@ import streamlit as st
 from pages.helper.utils import render_dataframe
 
 from pages.helper import db_queries
-from pages.helper.map_utils import get_case_map_location, geocode_location
+from pages.helper.map_utils import (
+    resolve_case_map_coordinate,
+    separate_overlapping_coordinate,
+)
 
 st.set_page_config(page_title="Cases Map")
 
@@ -32,13 +35,16 @@ elif st.session_state["login_status"]:
 
     # Build map centered on India
     m = folium.Map(location=[20.5937, 78.9629], zoom_start=5, tiles="CartoDB positron")
+    seen_coordinates = {}
 
     for case_id, name, status, city, last_seen, address, latitude, longitude in cases:
-        coords, location_text = get_case_map_location(
+        location_text = " / ".join(
+            value.strip() for value in (last_seen, address) if value
+        ) or city or "Unknown"
+        coords = resolve_case_map_coordinate(
             city, last_seen, address, latitude, longitude
         )
-        if latitude is None or longitude is None:
-            coords = geocode_location(city, last_seen, address)
+        marker_coords = separate_overlapping_coordinate(coords, seen_coordinates)
         color = "#27ae60" if status == "F" else "#e74c3c"
         status_text = "Found" if status == "F" else "Not Found"
         tooltip = (
@@ -47,7 +53,7 @@ elif st.session_state["login_status"]:
             f"Location: {location_text}"
         )
         folium.CircleMarker(
-            location=coords,
+            location=marker_coords,
             radius=10,
             color=color,
             fill=True,
