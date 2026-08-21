@@ -3,6 +3,7 @@ import uuid
 import os
 import base64
 from pathlib import Path
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
 from sqlalchemy import inspect, text
@@ -22,10 +23,26 @@ def _get_database_url() -> str:
         configured_url = None
     configured_url = configured_url or os.getenv("DATABASE_URL")
     if configured_url:
-        if configured_url.startswith("postgresql://"):
-            return configured_url.replace("postgresql://", "postgresql+psycopg://", 1)
-        return configured_url
+        return _normalize_database_url(str(configured_url))
     return f"sqlite:///{get_database_path().resolve().as_posix()}"
+
+
+def _normalize_database_url(configured_url: str) -> str:
+    """Normalize managed PostgreSQL URLs for psycopg and Streamlit Cloud."""
+    if configured_url.startswith("postgres://"):
+        configured_url = configured_url.replace("postgres://", "postgresql://", 1)
+    if not configured_url.startswith("postgresql"):
+        return configured_url
+    if configured_url.startswith("postgresql://"):
+        configured_url = configured_url.replace(
+            "postgresql://", "postgresql+psycopg://", 1
+        )
+
+    parsed = urlsplit(configured_url)
+    query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query.setdefault("sslmode", "require")
+    query.setdefault("connect_timeout", "10")
+    return urlunsplit(parsed._replace(query=urlencode(query)))
 
 
 database_url = _get_database_url()
