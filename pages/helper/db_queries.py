@@ -1,10 +1,12 @@
 import sqlite3
 import uuid
 import os
+import base64
 from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
 from sqlalchemy import inspect, text
+from sqlalchemy.pool import NullPool
 from sqlmodel import create_engine, Session, select
 import streamlit as st
 
@@ -27,11 +29,15 @@ def _get_database_url() -> str:
 
 
 database_url = _get_database_url()
-engine = create_engine(
-    database_url,
-    pool_pre_ping=True,
-    connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
-)
+engine_options = {
+    "pool_pre_ping": True,
+    "connect_args": {"check_same_thread": False}
+    if database_url.startswith("sqlite")
+    else {},
+}
+if not database_url.startswith("sqlite"):
+    engine_options["poolclass"] = NullPool
+engine = create_engine(database_url, **engine_options)
 
 
 def create_db():
@@ -49,6 +55,7 @@ def _migrate_db():
         ("registeredcases", "description", "TEXT"),
         ("registeredcases", "latitude", "REAL"),
         ("registeredcases", "longitude", "REAL"),
+        ("publicsubmissions", "image_data", "TEXT"),
     ]
     inspector = inspect(engine)
     with engine.begin() as connection:
@@ -189,6 +196,20 @@ def get_public_case_detail(case_id: str):
             ).where(PublicSubmissions.id == case_id)
         ).all()
         return result
+
+
+def get_public_case_image(case_id: str) -> bytes | None:
+    """Return shared public-upload image bytes, with invalid data treated as missing."""
+    with Session(engine) as session:
+        image_data = session.exec(
+            select(PublicSubmissions.image_data).where(PublicSubmissions.id == case_id)
+        ).first()
+    if not image_data:
+        return None
+    try:
+        return base64.b64decode(image_data, validate=True)
+    except (TypeError, ValueError):
+        return None
 
 
 def get_registered_case_detail(case_id: str):

@@ -1,6 +1,7 @@
 import os
 import uuid
 import json
+import base64
 import tempfile
 
 import streamlit as st
@@ -285,10 +286,14 @@ if upload_mode == "Image":
                 st.session_state["public_image_id"] = unique_id
                 st.session_state["public_image_path"] = uploaded_file_path
                 st.session_state["public_image_face_mesh"] = face_mesh
+                st.session_state["public_image_data"] = base64.b64encode(
+                    image_obj.getvalue()
+                ).decode("ascii")
 
             unique_id = st.session_state.get("public_image_id")
             uploaded_file_path = st.session_state.get("public_image_path")
             face_mesh = st.session_state.get("public_image_face_mesh")
+            image_data = st.session_state.get("public_image_data")
             image_obj.seek(0)
             st.image(image_obj, caption="📷 Uploaded Photo", width="stretch")
 
@@ -375,6 +380,7 @@ if upload_mode == "Image":
                             id=unique_id,
                             mobile=mobile_number.strip(),
                             birth_marks=birth_marks.strip() or None,
+                            image_data=image_data,
                             status="NF",
                         )
                         db_queries.new_public_case(details)

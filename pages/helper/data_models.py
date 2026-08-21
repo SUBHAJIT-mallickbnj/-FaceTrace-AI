@@ -17,6 +17,7 @@ class PublicSubmissions(SQLModel, table=True):
     email: str = Field(max_length=64, nullable=True)
     status: str = Field(max_length=16, nullable=False)
     birth_marks: str = Field(max_length=512, nullable=True)
+    image_data: str = Field(nullable=True)  # Base64-encoded uploaded image bytes
     # Changed: datetime.utcnow() -> datetime.utcnow (remove parentheses)
     submitted_on: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 

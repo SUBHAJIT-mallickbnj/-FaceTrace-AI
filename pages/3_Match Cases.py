@@ -63,9 +63,13 @@ def case_viewer(
         if registered_image:
             image_col.image(str(registered_image), width=160)
 
-        public_image = get_case_image_path(public_case_id)
+        public_image = db_queries.get_public_case_image(public_case_id)
         if public_image:
-            image_col.image(str(public_image), width=160)
+            image_col.image(public_image, width=160)
+        else:
+            public_image_path = get_case_image_path(public_case_id)
+            if public_image_path:
+                image_col.image(str(public_image_path), width=160)
 
         # Send email to complainant
         sent = mark_found and emailer.send_match_notification(
