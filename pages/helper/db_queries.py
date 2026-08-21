@@ -14,11 +14,8 @@ engine = create_engine(sqlite_url)
 
 
 def create_db():
-    try:
-        RegisteredCases.__table__.create(engine)
-        PublicSubmissions.__table__.create(engine)
-    except:
-        pass
+    RegisteredCases.__table__.create(engine, checkfirst=True)
+    PublicSubmissions.__table__.create(engine, checkfirst=True)
     # Add new columns to existing tables if they don't exist (SQLite migration)
     _migrate_db()
 

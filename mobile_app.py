@@ -15,6 +15,7 @@ from pages.helper.utils import (
 )
 
 st.set_page_config("FaceTrace AI", initial_sidebar_state="collapsed")
+db_queries.create_db()
 
 # ── Modern Custom CSS for Dark/Light Mode ────────────────────────────────────
 st.markdown("""
