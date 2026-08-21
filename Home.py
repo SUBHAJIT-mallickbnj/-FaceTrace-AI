@@ -66,6 +66,7 @@ def render_landing_page():
         [data-testid="stHeader"] { background: transparent; }
         [data-testid="stAppViewContainer"] > .main { padding-top: 0; }
         .landing-wrap { max-width: 1180px; margin: 0 auto; padding: 1.5rem 0 2rem; }
+        .landing-page-title { margin: 0 auto 2rem; text-align: center; color: #f7f8fa; font-size: clamp(2rem, 5vw, 4.2rem); line-height: 1; font-weight: 900; white-space: nowrap; }
         .landing-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 0 2.5rem; }
         .brand-lockup { display: flex; align-items: center; gap: .75rem; }
         .brand-mark { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 14px; color: white; background: linear-gradient(135deg, #f05d4e, #d43b69); box-shadow: 0 10px 24px rgba(212,59,105,.25); font-size: 1.35rem; }
@@ -90,8 +91,10 @@ def render_landing_page():
         .feature-card p { font-size: .88rem; line-height: 1.55; }
         .landing-footer { font-size: .8rem; padding-top: 2.5rem; }
         @media (prefers-color-scheme: light) { .brand-subtitle, .hero-text, .landing-stat small, .feature-card p, .section-kicker, .landing-footer { color: #5d6875; } .landing-stat, .feature-card { background: rgba(30,41,59,.035); } }
+                @media (max-width: 520px) { .landing-page-title { font-size: 2rem; } }
         </style>
         <div class="landing-wrap">
+                    <div class="landing-page-title">FaceTrace AI</div>
           <div class="landing-nav">
             <div class="brand-lockup"><div class="brand-mark">+</div><div><div class="brand-name">FaceTrace AI</div><div class="brand-subtitle">Missing person response network</div></div></div>
             <div class="nav-pill">SECURE OPERATIONS PORTAL</div>
