@@ -1,16 +1,37 @@
 import sqlite3
 import uuid
+import os
 from pathlib import Path
 
 from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
+from sqlalchemy import inspect, text
 from sqlmodel import create_engine, Session, select
+import streamlit as st
 
 from pages.helper.data_models import RegisteredCases, PublicSubmissions
 from pages.helper.utils import get_database_path, get_resources_dir
 from pages.helper.map_utils import normalize_location
 
-sqlite_url = f"sqlite:///{get_database_path().resolve().as_posix()}"
-engine = create_engine(sqlite_url)
+def _get_database_url() -> str:
+    """Use one hosted database in Cloud, with local SQLite as the fallback."""
+    try:
+        configured_url = st.secrets.get("DATABASE_URL")
+    except Exception:
+        configured_url = None
+    configured_url = configured_url or os.getenv("DATABASE_URL")
+    if configured_url:
+        if configured_url.startswith("postgresql://"):
+            return configured_url.replace("postgresql://", "postgresql+psycopg://", 1)
+        return configured_url
+    return f"sqlite:///{get_database_path().resolve().as_posix()}"
+
+
+database_url = _get_database_url()
+engine = create_engine(
+    database_url,
+    pool_pre_ping=True,
+    connect_args={"check_same_thread": False} if database_url.startswith("sqlite") else {},
+)
 
 
 def create_db():
@@ -21,7 +42,7 @@ def create_db():
 
 
 def _migrate_db():
-    """Add any new columns to existing tables without dropping data."""
+    """Add new columns to an existing database without dropping data."""
     new_columns = [
         ("registeredcases", "complainant_email", "TEXT"),
         ("registeredcases", "city", "TEXT"),
@@ -29,18 +50,14 @@ def _migrate_db():
         ("registeredcases", "latitude", "REAL"),
         ("registeredcases", "longitude", "REAL"),
     ]
-    try:
-        con = sqlite3.connect(get_database_path())
-        cursor = con.cursor()
+    inspector = inspect(engine)
+    with engine.begin() as connection:
         for table, column, col_type in new_columns:
-            try:
-                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}")
-            except sqlite3.OperationalError:
-                pass  # Column already exists
-        con.commit()
-        con.close()
-    except Exception:
-        pass
+            if table not in inspector.get_table_names():
+                continue
+            existing_columns = {item["name"] for item in inspector.get_columns(table)}
+            if column not in existing_columns:
+                connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
 
 
 def register_new_case(case_details: RegisteredCases):

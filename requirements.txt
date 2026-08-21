@@ -6,6 +6,7 @@ streamlit
 jinja2
 opencv-python-headless
 sqlmodel
+psycopg[binary]
 mediapipe==0.10.35
 streamlit-authenticator==0.4.2
 folium
