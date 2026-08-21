@@ -9,7 +9,8 @@
 ![SQLite](https://img.shields.io/badge/SQLite-000000?style=for-the-badge&logo=sqlite&logoColor=white)
 
 
-
+Admin URL responds HTTP 200: https://yyelz3g4gcjkrudqkbnekr.streamlit.app/
+Public URL responds HTTP 200: https://mobileapppy-agprmysksydbfafyltug9d.streamlit.app
 ---
 
 > **Disclaimer**
