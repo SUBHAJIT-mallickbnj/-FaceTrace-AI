@@ -58,6 +58,11 @@ authenticator = stauth.Authenticate(
     config["cookie"]["expiry_days"],
 )
 
+if st.session_state.get("authentication_status") is False:
+    st.session_state["login_status"] = False
+    st.session_state.pop("user", None)
+    st.session_state.pop("role", None)
+
 def render_landing_page():
     st.markdown(
         """
