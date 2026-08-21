@@ -12,9 +12,14 @@ import PIL.ImageDraw
 import PIL.ImageFont
 import numpy as np
 import streamlit as st
-import mediapipe as mp
-from mediapipe.tasks import python as mp_python
-from mediapipe.tasks.python import vision as mp_vision
+try:
+    import mediapipe as mp
+    from mediapipe.tasks import python as mp_python
+    from mediapipe.tasks.python import vision as mp_vision
+except ImportError:
+    mp = None
+    mp_python = None
+    mp_vision = None
 from streamlit.elements.image import ImageMixin
 
 
@@ -193,6 +198,8 @@ def extract_face_embeddings(image: np.ndarray) -> list[list[float]]:
 
 
 def _build_detector(num_faces: int = 5):
+    if mp is None or mp_python is None or mp_vision is None:
+        raise RuntimeError("Face detection dependencies are unavailable in this deployment environment.")
     base_options = mp_python.BaseOptions(model_asset_path=_MODEL_PATH)
     options = mp_vision.FaceLandmarkerOptions(
         base_options=base_options,
