@@ -8,6 +8,12 @@ from pages.helper import db_queries
 from pages.helper.map_utils import get_case_map_location, geocode_location
 from pages.helper.utils import get_login_config_path
 
+st.set_page_config(
+    page_title="FaceTrace AI | Missing Person Response",
+    page_icon=":material/radar:",
+    layout="wide",
+)
+
 # Initialise DB once at startup
 db_queries.create_db()
 
@@ -52,8 +58,90 @@ authenticator = stauth.Authenticate(
     config["cookie"]["expiry_days"],
 )
 
-# ── Custom login page styling ─────────────────────────────────────────────────
-if not st.session_state.get("authentication_status"):
+def render_landing_page():
+    st.markdown(
+        """
+        <style>
+        [data-testid="stSidebar"] { display: none; }
+        [data-testid="stHeader"] { background: transparent; }
+        [data-testid="stAppViewContainer"] > .main { padding-top: 0; }
+        .landing-wrap { max-width: 1180px; margin: 0 auto; padding: 1.5rem 0 2rem; }
+        .landing-nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .5rem 0 2.5rem; }
+        .brand-lockup { display: flex; align-items: center; gap: .75rem; }
+        .brand-mark { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; border-radius: 14px; color: white; background: linear-gradient(135deg, #f05d4e, #d43b69); box-shadow: 0 10px 24px rgba(212,59,105,.25); font-size: 1.35rem; }
+        .brand-name { font-weight: 800; font-size: 1.1rem; letter-spacing: .02em; }
+        .brand-subtitle, .hero-text, .landing-stat small, .feature-card p, .section-kicker, .landing-footer { color: #7f8b9b; }
+        .brand-subtitle { font-size: .78rem; margin-top: .15rem; }
+        .nav-pill { color: #d43b69; border: 1px solid rgba(212,59,105,.3); border-radius: 999px; padding: .45rem .9rem; font-size: .78rem; font-weight: 700; }
+        .eyebrow { color: #d43b69; font-size: .78rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+        .hero-title { max-width: 720px; margin: .8rem 0 1rem; font-size: clamp(2.8rem, 6vw, 5.4rem); line-height: .98; letter-spacing: -.04em; font-weight: 850; }
+        .hero-title span { color: #d43b69; }
+        .hero-text { max-width: 620px; font-size: 1.08rem; line-height: 1.7; }
+        .landing-stat-row { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.6rem; }
+        .landing-stat { min-width: 130px; padding: .85rem 1rem; border: 1px solid rgba(127,139,155,.22); border-radius: 12px; background: rgba(127,139,155,.06); }
+        .landing-stat strong { display: block; font-size: 1.15rem; }
+        .preview-frame { position: relative; overflow: hidden; padding: .65rem; border: 1px solid rgba(127,139,155,.26); border-radius: 18px; background: rgba(127,139,155,.08); box-shadow: 0 24px 70px rgba(0,0,0,.18); }
+        .preview-frame img { border-radius: 12px; }
+        .preview-tag { position: absolute; right: 1.2rem; bottom: 1.2rem; padding: .55rem .75rem; border-radius: 10px; color: white; background: #1d9b68; font-size: .76rem; font-weight: 800; }
+        .section-kicker { margin: 2.5rem 0 1rem; font-size: .86rem; }
+        .feature-card { min-height: 150px; padding: 1.2rem; border: 1px solid rgba(127,139,155,.2); border-radius: 14px; background: rgba(127,139,155,.055); }
+        .feature-icon { color: #d43b69; font-size: 1.35rem; }
+        .feature-card h3 { margin: .75rem 0 .45rem; font-size: 1rem; }
+        .feature-card p { font-size: .88rem; line-height: 1.55; }
+        .landing-footer { font-size: .8rem; padding-top: 2.5rem; }
+        @media (prefers-color-scheme: light) { .brand-subtitle, .hero-text, .landing-stat small, .feature-card p, .section-kicker, .landing-footer { color: #5d6875; } .landing-stat, .feature-card { background: rgba(30,41,59,.035); } }
+        </style>
+        <div class="landing-wrap">
+          <div class="landing-nav">
+            <div class="brand-lockup"><div class="brand-mark">+</div><div><div class="brand-name">FaceTrace AI</div><div class="brand-subtitle">Missing person response network</div></div></div>
+            <div class="nav-pill">SECURE OPERATIONS PORTAL</div>
+          </div>
+          <div class="eyebrow">Identify faster. Coordinate better.</div>
+          <div class="hero-title">A clearer path from <span>missing</span> to found.</div>
+          <div class="hero-text">FaceTrace AI helps officers and communities register cases, analyze sightings, and coordinate resolutions from one focused workspace.</div>
+          <div class="landing-stat-row"><div class="landing-stat"><strong>468-point</strong><small>face landmark analysis</small></div><div class="landing-stat"><strong>Live map</strong><small>case locations and status</small></div><div class="landing-stat"><strong>Role-based</strong><small>secure officer access</small></div></div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    preview_col, copy_col = st.columns([1.15, 0.85], gap="large")
+    with preview_col:
+        st.markdown('<div class="preview-frame">', unsafe_allow_html=True)
+        st.image("assets/screenshots/register_new_case.png", use_column_width=True)
+        st.markdown('<div class="preview-tag">LIVE CASE INTELLIGENCE</div></div>', unsafe_allow_html=True)
+    with copy_col:
+        st.markdown('<div class="section-kicker">BUILT FOR THE MOMENT THAT MATTERS</div>', unsafe_allow_html=True)
+        st.markdown("### One workspace. Every response.")
+        st.write("Register a missing-person case, receive public sightings, compare face embeddings, and keep teams aligned with live case status and location markers.")
+        if st.button("Open secure dashboard", type="primary", use_container_width=True):
+            st.session_state["show_login"] = True
+            st.rerun()
+        st.caption("Authorized officers and administrators only")
+
+    st.markdown('<div class="section-kicker">THE RESPONSE TOOLKIT</div>', unsafe_allow_html=True)
+    feature_cols = st.columns(3, gap="medium")
+    features = [("01", "Register cases", "Capture identity details, photos, locations, and complainant information in one structured record."), ("02", "Match sightings", "Compare public submissions against unresolved cases with confidence-aware face analysis."), ("03", "Track resolution", "Follow red unresolved markers to green confirmed outcomes on the live map.")]
+    for column, (number, title, description) in zip(feature_cols, features):
+        with column:
+            st.markdown(f'<div class="feature-card"><div class="feature-icon">{number}</div><h3>{title}</h3><p>{description}</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="landing-footer">FaceTrace AI &middot; Secure case coordination for faster, more informed action.</div>', unsafe_allow_html=True)
+
+# ── Public landing page and secure login ──────────────────────────────────────
+if not st.session_state.get("authentication_status") and not st.session_state.get("show_login"):
+    render_landing_page()
+else:
+    # ── Custom login page styling ─────────────────────────────────────────────
+    if not st.session_state.get("authentication_status"):
+        st.markdown(
+            """
+            <style>
+            [data-testid="stSidebar"] { display: none; }
+            [data-testid="stHeader"] { background: transparent; }
+            </style>
+            """,
+            unsafe_allow_html=True,
+        )
     st.markdown(
         """
         <style>
@@ -77,11 +165,11 @@ if not st.session_state.get("authentication_status"):
             <span class="badge">AI-Powered Facial Recognition</span>
         </div>
         """,
-        unsafe_allow_html=True,
-    )
+            unsafe_allow_html=True,
+        )
 
-# Perform login — updates session state authentication_status
-authenticator.login(location="main")
+    # Perform login — updates session state authentication_status
+    authenticator.login(location="main")
 
 # ── Post-login dashboard ──────────────────────────────────────────────────────
 if st.session_state.get("authentication_status"):
