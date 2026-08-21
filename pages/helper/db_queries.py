@@ -229,6 +229,15 @@ def get_public_case_image(case_id: str) -> bytes | None:
         return None
 
 
+def get_registered_case_id_for_public_case(public_case_id: str) -> str | None:
+    """Return the registered case linked to a confirmed public sighting."""
+    with Session(engine) as session:
+        return session.exec(
+            select(RegisteredCases.id)
+            .where(RegisteredCases.matched_with == public_case_id)
+        ).first()
+
+
 def get_registered_case_detail(case_id: str):
     with Session(engine) as session:
         result = session.exec(

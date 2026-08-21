@@ -122,7 +122,17 @@ def public_case_viewer(case: list) -> None:
     elif image_path:
         image_col.image(str(image_path), width=120)
     else:
-        image_col.caption("No image")
+        legacy_registered_id = db_queries.get_registered_case_id_for_public_case(case_id)
+        legacy_image_path = (
+            get_case_image_path(legacy_registered_id)
+            if legacy_registered_id
+            else None
+        )
+        if legacy_image_path:
+            image_col.image(str(legacy_image_path), width=120)
+            image_col.caption("Matched case image (legacy submission)")
+        else:
+            image_col.caption("No image stored for this submission")
 
     st.write("---")
 

@@ -2,9 +2,11 @@ import os
 import uuid
 import json
 import base64
+import io
 import tempfile
 
 import streamlit as st
+from PIL import Image
 
 import pages.helper.db_queries as db_queries
 from pages.helper.data_models import PublicSubmissions
@@ -517,6 +519,9 @@ else:
                         count = 0
                         for landmarks, _ in extracted_faces:
                             sub_id = str(uuid.uuid4())
+                            frame_image = Image.fromarray(_)
+                            image_buffer = io.BytesIO()
+                            frame_image.save(image_buffer, format="JPEG")
                             details = PublicSubmissions(
                                 submitted_by=sub_name.strip(),
                                 location=address.strip(),
@@ -525,6 +530,9 @@ else:
                                 id=sub_id,
                                 mobile=mobile_number.strip(),
                                 birth_marks=birth_marks.strip() or None,
+                                image_data=base64.b64encode(
+                                    image_buffer.getvalue()
+                                ).decode("ascii"),
                                 status="NF",
                             )
                             db_queries.new_public_case(details)
