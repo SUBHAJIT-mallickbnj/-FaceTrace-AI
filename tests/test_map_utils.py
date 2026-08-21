@@ -16,6 +16,7 @@ class MapUtilsTests(unittest.TestCase):
 
         self.assertEqual(first, (22.5726, 88.3639))
         self.assertNotEqual(second, first)
+        self.assertGreater(abs(second[0] - first[0]) + abs(second[1] - first[1]), 0.1)
         self.assertEqual(len(seen), 1)
 
     def test_invalid_stored_coordinates_use_geocoding(self):

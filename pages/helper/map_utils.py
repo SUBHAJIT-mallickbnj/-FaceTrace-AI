@@ -93,7 +93,7 @@ def separate_overlapping_coordinate(coords, seen_coordinates: dict):
     ring = ring_position // ring_size + 1
     position = ring_position % ring_size
     angle = 2 * math.pi * position / ring_size
-    offset = 0.025 * ring
+    offset = 0.12 * ring
     return coords[0] + offset * math.sin(angle), coords[1] + offset * math.cos(angle)
 
 
