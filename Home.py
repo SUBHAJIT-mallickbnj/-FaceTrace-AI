@@ -130,23 +130,14 @@ def render_landing_page():
 # ── Public landing page and secure login ──────────────────────────────────────
 if not st.session_state.get("authentication_status") and not st.session_state.get("show_login"):
     render_landing_page()
-else:
+elif not st.session_state.get("authentication_status"):
     # ── Custom login page styling ─────────────────────────────────────────────
-    if not st.session_state.get("authentication_status"):
-        st.markdown(
-            """
-            <style>
-            [data-testid="stSidebar"] { display: none; }
-            [data-testid="stHeader"] { background: transparent; }
-            </style>
-            """,
-            unsafe_allow_html=True,
-        )
-    st.markdown(
+    login_banner = st.empty()
+    login_banner.markdown(
         """
         <style>
-        /* Hide default Streamlit header on login page */
         [data-testid="stHeader"] { background: transparent; }
+        [data-testid="stSidebar"] { display: none; }
 
         /* Login card wrapper */
         .login-card {
@@ -165,14 +156,17 @@ else:
             <span class="badge">AI-Powered Facial Recognition</span>
         </div>
         """,
-            unsafe_allow_html=True,
-        )
+        unsafe_allow_html=True,
+    )
 
     # Perform login — updates session state authentication_status
     authenticator.login(location="main")
+    if st.session_state.get("authentication_status"):
+        login_banner.empty()
 
 # ── Post-login dashboard ──────────────────────────────────────────────────────
 if st.session_state.get("authentication_status"):
+    st.session_state["show_login"] = False
     authenticator.logout("Logout", "sidebar")
 
     st.session_state["login_status"] = True
