@@ -104,15 +104,28 @@ def resolve_case_map_coordinate(
     latitude: float | None = None,
     longitude: float | None = None,
 ):
-    """Return a finite coordinate for every case, using geocoding before city fallback."""
-    if (
-        latitude is not None
-        and longitude is not None
-        and math.isfinite(float(latitude))
-        and math.isfinite(float(longitude))
-    ):
-        return float(latitude), float(longitude)
-    return geocode_location(city, last_seen, address)
+    """Resolve a marker from the victim's last-seen location only."""
+    return geocode_last_seen_location(last_seen)
+
+
+@lru_cache(maxsize=256)
+def geocode_last_seen_location(last_seen: str | None):
+    """Geocode only the location entered in the admin Last Seen field."""
+    query = ", ".join(value.strip() for value in (last_seen, "India") if value)
+    if query:
+        try:
+            request = Request(
+                "https://nominatim.openstreetmap.org/search?"
+                + urlencode({"q": query, "format": "json", "limit": 1}),
+                headers={"User-Agent": "missing-person-map/1.0"},
+            )
+            with urlopen(request, timeout=2) as response:
+                results = json.load(response)
+            if results:
+                return float(results[0]["lat"]), float(results[0]["lon"])
+        except (OSError, ValueError, KeyError, json.JSONDecodeError):
+            pass
+    return get_city_coordinates(last_seen)
 
 
 @lru_cache(maxsize=256)

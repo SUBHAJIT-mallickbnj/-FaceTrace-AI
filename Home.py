@@ -290,9 +290,7 @@ if st.session_state.get("authentication_status"):
             seen_coordinates = {}
 
             for case_id, name, status, city, last_seen, address, latitude, longitude in cases:
-                location_text = " / ".join(
-                    value.strip() for value in (last_seen, address) if value
-                ) or city or "Unknown"
+                location_text = last_seen.strip() if last_seen else "Unknown"
                 coords = resolve_case_map_coordinate(
                     city, last_seen, address, latitude, longitude
                 )
