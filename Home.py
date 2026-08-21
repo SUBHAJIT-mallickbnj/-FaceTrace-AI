@@ -21,9 +21,9 @@ if not config_path.exists():
             "usernames": {
                 "gagan": {
                     "email": "gaganmanku96@gmail.com",
-                    "name": "Gagandeep Singh",
-                    "city": "Noida",
-                    "area": "Sector 128",
+                    "name": "SUBHAJIT MALLICK",
+                    "city": "West Bengal",
+                    "area": "Rupnarayanpur",
                     "role": "Admin",
                     "password": "$2b$12$ByZbwxrcvCXVLQO4zjI95OteXToaBiwWDqujsHiKfeGzionz0VqAG",
                 }
