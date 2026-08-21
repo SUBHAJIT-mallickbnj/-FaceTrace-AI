@@ -1,0 +1,15 @@
+*.pyc
+__pycache__
+sqlite_database.db
+classifier.pkl
+login_config.yml
+face_landmarker.task
+classifier_cache.txt
+CLAUDE.md
+.DS_Store
+hs_err_pid*.log
+.venv/
+.venv-1/
+.pytest_cache/
+.vscode/
+resources/models/*.onnx
