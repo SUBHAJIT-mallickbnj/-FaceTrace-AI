@@ -83,6 +83,8 @@ def get_case_map_location(
 
 def separate_overlapping_coordinate(coords, seen_coordinates: dict):
     """Keep cases at the same city visible while preserving their exact tooltip."""
+    if not coords or len(coords) < 2:
+        coords = CITY_COORDS["Unknown"]
     key = (round(coords[0], 5), round(coords[1], 5))
     occurrence = seen_coordinates.get(key, 0)
     seen_coordinates[key] = occurrence + 1
@@ -105,7 +107,7 @@ def resolve_case_map_coordinate(
     longitude: float | None = None,
 ):
     """Resolve a marker from the victim's last-seen location only."""
-    return geocode_last_seen_location(last_seen)
+    return geocode_last_seen_location(last_seen) or CITY_COORDS["Unknown"]
 
 
 @lru_cache(maxsize=256)
