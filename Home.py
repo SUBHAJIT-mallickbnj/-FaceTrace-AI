@@ -119,7 +119,7 @@ def render_landing_page():
     preview_col, copy_col = st.columns([1.15, 0.85], gap="large")
     with preview_col:
         st.markdown('<div class="preview-frame">', unsafe_allow_html=True)
-        st.image("assets/screenshots/register_new_case.png", use_column_width=True)
+        st.image("assets/screenshots/register_new_case.png", width="stretch")
         st.markdown('<div class="preview-tag">LIVE CASE INTELLIGENCE</div></div>', unsafe_allow_html=True)
     with copy_col:
         st.markdown('<div class="section-kicker">BUILT FOR THE MOMENT THAT MATTERS</div>', unsafe_allow_html=True)

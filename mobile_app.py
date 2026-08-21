@@ -289,7 +289,7 @@ if upload_mode == "Image":
             uploaded_file_path = st.session_state.get("public_image_path")
             face_mesh = st.session_state.get("public_image_face_mesh")
             image_obj.seek(0)
-            st.image(image_obj, caption="📷 Uploaded Photo", use_column_width=True)
+            st.image(image_obj, caption="📷 Uploaded Photo", width="stretch")
 
             if face_mesh is None:
                 st.markdown("""
