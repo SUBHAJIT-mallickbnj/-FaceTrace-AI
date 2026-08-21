@@ -8,7 +8,7 @@
 ![Python](https://img.shields.io/badge/Python-000000?style=for-the-badge&logo=python&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-000000?style=for-the-badge&logo=sqlite&logoColor=white)
 
-> [![LinkedIn](https://i.stack.imgur.com/gVE0j.png) Endorse on LinkedIn](https://www.linkedin.com/in/gaganmanku96/) if this project was helpful.
+
 
 ---
 
