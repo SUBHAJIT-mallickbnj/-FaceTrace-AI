@@ -4,7 +4,7 @@ import streamlit as st
 from yaml import SafeLoader
 import streamlit_authenticator as stauth
 
-from pages.helper import db_queries
+import pages.helper.db_queries as db_queries
 from pages.helper.map_utils import (
     resolve_case_map_coordinate,
     separate_overlapping_coordinate,

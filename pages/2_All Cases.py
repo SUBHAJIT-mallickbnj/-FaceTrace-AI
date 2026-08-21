@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 
-from pages.helper import db_queries, emailer
+import pages.helper.db_queries as db_queries
+import pages.helper.emailer as emailer
 from pages.helper.utils import get_case_image_path, render_image, get_resources_dir
 
 PAGE_SIZE = 10

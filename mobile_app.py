@@ -5,7 +5,7 @@ import tempfile
 
 import streamlit as st
 
-from pages.helper import db_queries
+import pages.helper.db_queries as db_queries
 from pages.helper.data_models import PublicSubmissions
 from pages.helper.utils import (
     image_obj_to_numpy,

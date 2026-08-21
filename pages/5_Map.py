@@ -2,7 +2,7 @@ import streamlit as st
 
 from pages.helper.utils import render_dataframe
 
-from pages.helper import db_queries
+import pages.helper.db_queries as db_queries
 from pages.helper.map_utils import (
     resolve_case_map_coordinate,
     separate_overlapping_coordinate,

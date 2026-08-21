@@ -1,7 +1,9 @@
 import streamlit as st
 
-from pages.helper import db_queries, match_algo, train_model
-from pages.helper import emailer
+import pages.helper.db_queries as db_queries
+import pages.helper.match_algo as match_algo
+import pages.helper.train_model as train_model
+import pages.helper.emailer as emailer
 from pages.helper.utils import get_case_image_path, render_image, get_resources_dir
 
 # SFace cosine-distance threshold used in match_algo — keep in sync.

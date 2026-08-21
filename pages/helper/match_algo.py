@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import numpy as np
 import pandas as pd
-from pages.helper import db_queries
+import pages.helper.db_queries as db_queries
 
 IDENTITY_FEATURE_LENGTH = 128
 IDENTITY_DISTANCE_THRESHOLD = 0.363

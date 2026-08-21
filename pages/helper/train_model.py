@@ -7,7 +7,7 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.neighbors import KNeighborsClassifier
 
-from pages.helper import db_queries
+import pages.helper.db_queries as db_queries
 
 
 def _get_db_row_count(submitted_by: str) -> int:
