@@ -9,7 +9,7 @@ from pages.helper.map_utils import (
     resolve_case_map_coordinate,
     separate_overlapping_coordinate,
 )
-from pages.helper.utils import get_login_config_path
+from pages.helper.utils import get_login_config_path, render_image
 
 st.set_page_config(
     page_title="FaceTrace AI | Missing Person Response",
@@ -119,7 +119,7 @@ def render_landing_page():
     preview_col, copy_col = st.columns([1.15, 0.85], gap="large")
     with preview_col:
         st.markdown('<div class="preview-frame">', unsafe_allow_html=True)
-        st.image("assets/screenshots/register_new_case.png", width="stretch")
+        render_image("assets/screenshots/register_new_case.png", width="stretch")
         st.markdown('<div class="preview-tag">LIVE CASE INTELLIGENCE</div></div>', unsafe_allow_html=True)
     with copy_col:
         st.markdown('<div class="section-kicker">BUILT FOR THE MOMENT THAT MATTERS</div>', unsafe_allow_html=True)
