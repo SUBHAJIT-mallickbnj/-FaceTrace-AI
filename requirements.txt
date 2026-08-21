@@ -4,7 +4,7 @@ numpy>=1.26.0
 pillow
 streamlit
 jinja2
-opencv-python
+opencv-python-headless
 sqlmodel
 mediapipe
 streamlit-authenticator==0.4.2
