@@ -16,8 +16,8 @@ try:
     import mediapipe as mp
     from mediapipe.tasks import python as mp_python
     from mediapipe.tasks.python import vision as mp_vision
-except ImportError as exc:
-    _MEDIAPIPE_IMPORT_ERROR = f"MediaPipe import failed: {exc}"
+except ImportError:
+    _MEDIAPIPE_IMPORT_ERROR = "Face detection dependencies are unavailable in this deployment environment."
     mp = None
     mp_python = None
     mp_vision = None
