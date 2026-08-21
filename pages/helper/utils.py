@@ -3,7 +3,10 @@ import json
 import urllib.request
 from pathlib import Path
 
-import cv2
+try:
+    import cv2
+except ImportError:
+    cv2 = None
 import PIL
 import PIL.ImageDraw
 import PIL.ImageFont
@@ -145,6 +148,8 @@ def _ensure_face_models():
 
 @st.cache_resource
 def _build_face_recognizer():
+    if cv2 is None:
+        raise RuntimeError("OpenCV is unavailable in this deployment environment.")
     _ensure_face_models()
     detector = cv2.FaceDetectorYN.create(
         str(_FACE_DETECTOR_PATH), "", (320, 320), 0.6, 0.3, 5000
@@ -410,6 +415,9 @@ def extract_unique_faces_from_video(
     Returns list of (landmarks, frame_rgb) tuples — one per unique face.
     """
     _ensure_model_silent()
+    if cv2 is None:
+        st.error("Video processing is unavailable in this deployment environment.")
+        return []
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         return []
