@@ -198,7 +198,7 @@ python scripts/bulk_upload.py
 This processes every image in both folders:
 - Extracts a face mesh using MediaPipe (images with no detectable face are skipped)
 - Generates realistic metadata (names, cities, Aadhaar numbers, last-seen locations)
-- Inserts records into the SQLite database
+- Inserts records into the PostgreSQL database
 - Copies images to `resources/` so the app can display them
 
 By default `submitted_by` is set to `gagan` (the username in the default `login_config.yml`). If you've changed your username, pass it explicitly:
@@ -220,7 +220,7 @@ python scripts/bulk_upload.py
 - **Streamlit** — UI for both portals
 - **MediaPipe Tasks** — face mesh landmark extraction (468 points × 3D)
 - **scikit-learn KNN** — face matching
-- **SQLModel + SQLite** — data storage
+- **SQLModel + PostgreSQL** — data storage
 - **Folium** — interactive map
 - **OpenCV** — video frame extraction
 
@@ -241,13 +241,13 @@ Yes. Add as many usernames as needed to `login_config.yml`. Each officer sees on
 The map uses a built-in city → coordinates lookup. If a city is missing, open an issue or add it to the `CITY_COORDS` dict in `Home.py`.
 
 **Q: Where is the data stored?**
-Everything is in `sqlite_database.db` (git-ignored) in the project root. Images are stored as JPGs in `resources/` (also git-ignored). Nothing is sent to any external server.
+Everything is in `PostgreSQL_database.db` (git-ignored) in the project root. Images are stored as JPGs in `resources/` (also git-ignored). Nothing is sent to any external server.
 
 **Q: How do I reset the database?**
 ```bash
-sqlite3 sqlite_database.db "DELETE FROM registeredcases; DELETE FROM publicsubmissions;"
+PostgreSQL PostgreSQL_database.db "DELETE FROM registeredcases; DELETE FROM publicsubmissions;"
 ```
-Or simply delete `sqlite_database.db` — it will be recreated on next run.
+Or simply delete `PostgreSQL_database.db` — it will be recreated on next run.
 
 **Q: Can the public portal be hosted separately from the officer portal?**
 Yes. They are independent Streamlit apps (`Home.py` and `mobile_app.py`) and share only the SQLite database. Point both to the same database file path and they will work together.
