@@ -132,24 +132,22 @@ SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
 ```
 The complainant's email entered during case registration is used as the recipient.
 
-### Recommended: Independent image backup
+### Recommended: Independent Google Drive image backup
 
-Images are stored in the shared PostgreSQL database. For recovery if PostgreSQL loses
-an image, configure an independent S3-compatible bucket in Streamlit Cloud secrets:
+Images are stored in the shared PostgreSQL database and, when configured, in a
+private Google Drive folder. Create a Google Cloud service account, enable the
+Google Drive API, share the private Drive folder with the service-account email as
+an editor, and add these values to Streamlit Cloud secrets:
 
 ```
-IMAGE_BACKUP_BUCKET = "your-private-bucket"
-IMAGE_BACKUP_ACCESS_KEY = "your-access-key"
-IMAGE_BACKUP_SECRET_KEY = "your-secret-key"
-IMAGE_BACKUP_REGION = "auto"
-IMAGE_BACKUP_ENDPOINT_URL = "https://your-s3-endpoint" # omit for AWS S3
+GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = '''paste-the-complete-service-account-json-here'''
+GOOGLE_DRIVE_FOLDER_ID = "your-private-drive-folder-id"
 ```
 
-New admin and public images are written to PostgreSQL and the backup bucket. If a
-database image is missing, the app restores it from the bucket automatically. Keep
-the bucket private and enable versioning/retention according to your organisation's
-data policy. Images that were already deleted from both PostgreSQL and local storage
-cannot be reconstructed without another existing copy.
+New admin and public images are written to PostgreSQL and Google Drive. If a database
+image is missing, the app downloads the matching `case-images/<case-id>.jpg` file
+from Drive, restores PostgreSQL, and displays it. Keep the Drive folder private.
+Images deleted from both PostgreSQL and Drive cannot be reconstructed.
 
 ---
 

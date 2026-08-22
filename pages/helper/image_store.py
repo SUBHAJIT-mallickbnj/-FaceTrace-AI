@@ -1,5 +1,7 @@
 import os
-
+import io
+import json
+import os
 
 
 def _setting(name: str, default=None):
@@ -8,25 +10,39 @@ def _setting(name: str, default=None):
         return value
     try:
         import streamlit as st
+
         return st.secrets.get(name, default)
     except Exception:
         return default
 
 
 def _settings():
-    """Read optional S3-compatible backup settings without requiring them locally."""
-    bucket = _setting("IMAGE_BACKUP_BUCKET")
-    access_key = _setting("IMAGE_BACKUP_ACCESS_KEY")
-    secret_key = _setting("IMAGE_BACKUP_SECRET_KEY")
-    if not all((bucket, access_key, secret_key)):
+    """Read optional Google Drive backup settings."""
+    credentials = _setting("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON")
+    folder_id = _setting("GOOGLE_DRIVE_FOLDER_ID")
+    if not credentials or not folder_id:
         return None
-    return {
-        "bucket": bucket,
-        "access_key": access_key,
-        "secret_key": secret_key,
-        "endpoint_url": _setting("IMAGE_BACKUP_ENDPOINT_URL"),
-        "region_name": _setting("IMAGE_BACKUP_REGION", "auto"),
-    }
+    try:
+        if isinstance(credentials, str):
+            credentials = json.loads(credentials)
+        return {"credentials": credentials, "folder_id": folder_id}
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return None
+
+
+def _client(settings):
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+
+    credentials = service_account.Credentials.from_service_account_info(
+        settings["credentials"],
+        scopes=["https://www.googleapis.com/auth/drive.file"],
+    )
+    return build("drive", "v3", credentials=credentials, cache_discovery=False)
+
+
+def _file_name(case_id: str) -> str:
+    return f"case-images/{case_id}.jpg"
 
 
 def backup_image(case_id: str, image_bytes: bytes) -> bool:
@@ -34,21 +50,21 @@ def backup_image(case_id: str, image_bytes: bytes) -> bool:
     if settings is None:
         return False
     try:
-        import boto3
+        from googleapiclient.http import MediaIoBaseUpload
 
-        client = boto3.client(
-            "s3",
-            endpoint_url=settings["endpoint_url"],
-            region_name=settings["region_name"],
-            aws_access_key_id=settings["access_key"],
-            aws_secret_access_key=settings["secret_key"],
+        client = _client(settings)
+        name = _file_name(case_id)
+        query = (
+            f"name = '{name}' and '{settings['folder_id']}' in parents "
+            "and trashed = false"
         )
-        client.put_object(
-            Bucket=settings["bucket"],
-            Key=f"case-images/{case_id}.jpg",
-            Body=image_bytes,
-            ContentType="image/jpeg",
-        )
+        files = client.files().list(q=query, fields="files(id)").execute().get("files", [])
+        media = MediaIoBaseUpload(io.BytesIO(image_bytes), mimetype="image/jpeg")
+        metadata = {"name": name, "parents": [settings["folder_id"]]}
+        if files:
+            client.files().update(fileId=files[0]["id"], media_body=media).execute()
+        else:
+            client.files().create(body=metadata, media_body=media, fields="id").execute()
         return True
     except Exception:
         return False
@@ -59,18 +75,23 @@ def restore_image(case_id: str) -> bytes | None:
     if settings is None:
         return None
     try:
-        import boto3
+        from googleapiclient.http import MediaIoBaseDownload
 
-        client = boto3.client(
-            "s3",
-            endpoint_url=settings["endpoint_url"],
-            region_name=settings["region_name"],
-            aws_access_key_id=settings["access_key"],
-            aws_secret_access_key=settings["secret_key"],
+        client = _client(settings)
+        query = (
+            f"name = '{_file_name(case_id)}' and '{settings['folder_id']}' in parents "
+            "and trashed = false"
         )
-        response = client.get_object(
-            Bucket=settings["bucket"], Key=f"case-images/{case_id}.jpg"
+        files = client.files().list(q=query, fields="files(id)").execute().get("files", [])
+        if not files:
+            return None
+        buffer = io.BytesIO()
+        downloader = MediaIoBaseDownload(
+            buffer, client.files().get_media(fileId=files[0]["id"])
         )
-        return response["Body"].read()
+        done = False
+        while not done:
+            _, done = downloader.next_chunk()
+        return buffer.getvalue()
     except Exception:
         return None
