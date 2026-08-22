@@ -6,13 +6,12 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-000000?style=for-the-badge&logo=streamlit&logoColor=white)
 ![MediaPipe](https://img.shields.io/badge/MediaPipe-000000?style=for-the-badge&logo=mediapipe&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-000000?style=for-the-badge&logo=python&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-000000?style=for-the-badge&logo=sqlite&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+
+Admin URL : https://yyelz3g4gcjkrudqkbnekr.streamlit.app/
 
 
-Admin URL responds HTTP 200: https://yyelz3g4gcjkrudqkbnekr.streamlit.app/
-
-
-Public URL responds HTTP 200: https://mobileapppy-agprmysksydbfafyltug9d.streamlit.app
+Public URL : https://mobileapppy-agprmysksydbfafyltug9d.streamlit.app
 
 
 ---
