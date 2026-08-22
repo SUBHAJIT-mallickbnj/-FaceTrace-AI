@@ -4,7 +4,6 @@ import streamlit as st
 from yaml import SafeLoader
 import streamlit_authenticator as stauth
 
-import pages.helper.db_queries as db_queries
 from pages.helper.map_utils import (
     resolve_case_map_coordinate,
     separate_overlapping_coordinate,
@@ -16,6 +15,8 @@ st.set_page_config(
     page_icon=":material/radar:",
     layout="wide",
 )
+
+import pages.helper.db_queries as db_queries
 
 # Initialise DB once at startup
 db_queries.create_db()

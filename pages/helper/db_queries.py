@@ -180,9 +180,18 @@ def get_training_data(submitted_by: str):
 
 
 def new_public_case(public_case_details: PublicSubmissions):
+    if public_case_details.image_data:
+        if isinstance(public_case_details.image_data, bytes):
+            public_case_details.image_data = base64.b64encode(
+                public_case_details.image_data
+            ).decode("ascii")
+        else:
+            public_case_details.image_data = str(public_case_details.image_data)
+
     with Session(engine) as session:
         session.add(public_case_details)
         session.commit()
+        session.refresh(public_case_details)
 
 
 def auto_confirm_public_matches():
@@ -216,16 +225,23 @@ def get_public_case_detail(case_id: str):
 
 
 def get_public_case_image(case_id: str) -> bytes | None:
-    """Return shared public-upload image bytes, with invalid data treated as missing."""
+    """Return shared public-upload image bytes from the hosted database."""
     with Session(engine) as session:
         image_data = session.exec(
             select(PublicSubmissions.image_data).where(PublicSubmissions.id == case_id)
         ).first()
     if not image_data:
         return None
+
+    if isinstance(image_data, (bytes, bytearray, memoryview)):
+        return bytes(image_data)
+
+    if isinstance(image_data, str) and image_data.startswith("data:"):
+        image_data = image_data.split(",", 1)[-1]
+
     try:
-        return base64.b64decode(image_data, validate=True)
-    except (TypeError, ValueError):
+        return base64.b64decode(str(image_data).strip(), validate=True)
+    except (TypeError, ValueError, base64.binascii.Error):
         return None
 
 
