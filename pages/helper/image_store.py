@@ -113,6 +113,11 @@ def backup_image(case_id: str, image_bytes: bytes) -> bool:
         return False
 
 
+def backup_configured() -> bool:
+    """Return whether a complete Drive credential configuration is available."""
+    return _settings() is not None
+
+
 def restore_image(case_id: str) -> bytes | None:
     settings = _settings()
     if settings is None:
