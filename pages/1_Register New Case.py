@@ -73,6 +73,7 @@ if user is not None:
             faces = st.session_state.get("nc_faces", [])
             image_numpy = st.session_state.get("nc_image_numpy")
             upload_id = st.session_state.get("nc_upload_id")
+            uploaded_file_path = st.session_state.get("nc_uploaded_path")
 
             if not faces:
                 st.error(
@@ -169,6 +170,9 @@ if user is not None:
                 else:
                     selected_face = faces[selected_face_idx]
                     selected_feature = selected_face.get("embedding") or selected_face["landmarks"]
+                    if not uploaded_file_path or not uploaded_file_path.exists():
+                        st.error("The uploaded image is no longer available. Please upload it again.")
+                        st.stop()
                     case_id = str(uuid.uuid4())
                     new_case_details = RegisteredCases(
                         id=case_id,

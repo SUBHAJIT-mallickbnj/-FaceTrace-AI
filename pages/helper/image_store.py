@@ -1,7 +1,6 @@
 import os
 import io
 import json
-import os
 
 
 def _setting(name: str, default=None):
