@@ -110,7 +110,23 @@ def _backfill_image_data():
                 if record is not None:
                     record.image_data = image_data
                     image_store.backup_image(str(case_id), image_path.read_bytes())
+                    _backup_case_data(
+                        record,
+                        "registered" if model is RegisteredCases else "public",
+                    )
         session.commit()
+
+
+def _case_backup_data(case) -> dict:
+    """Return serializable case metadata without duplicating the image blob."""
+    data = case.model_dump() if hasattr(case, "model_dump") else case.dict()
+    data.pop("image_data", None)
+    return data
+
+
+def _backup_case_data(case, case_type: str):
+    if not image_store.backup_case_data(case_type, str(case.id), _case_backup_data(case)):
+        print(f"[WARNING] Case saved to PostgreSQL but not Google Drive: {case.id}")
 
 
 def register_new_case(case_details: RegisteredCases):
@@ -128,6 +144,7 @@ def register_new_case(case_details: RegisteredCases):
         except Exception:
             session.rollback()
             raise
+    _backup_case_data(case_details, "registered")
 
 
 def set_registered_case_image(case_id: str, image_data):
@@ -147,6 +164,8 @@ def set_registered_case_image(case_id: str, image_data):
         case.image_data = image_data
         session.add(case)
         session.commit()
+        session.refresh(case)
+    _backup_case_data(case, "registered")
     if image_bytes:
         if not image_store.backup_image(str(case_id), image_bytes):
             print(f"[WARNING] Registered image saved to PostgreSQL but not Google Drive: {case_id}")
@@ -280,6 +299,7 @@ def new_public_case(public_case_details: PublicSubmissions):
         session.add(public_case_details)
         session.commit()
         session.refresh(public_case_details)
+    _backup_case_data(public_case_details, "public")
     if image_bytes:
         if not image_store.backup_image(str(public_case_details.id), image_bytes):
             print(f"[WARNING] Public image saved to PostgreSQL but not Google Drive: {public_case_details.id}")
@@ -427,6 +447,10 @@ def update_found_status(register_case_id: str, public_case_id: str):
         session.add(registered_case_details)
         session.add(public_case_details)
         session.commit()
+        session.refresh(registered_case_details)
+        session.refresh(public_case_details)
+    _backup_case_data(registered_case_details, "registered")
+    _backup_case_data(public_case_details, "public")
 
 
 def get_registered_cases_count(submitted_by: str, status: str):
@@ -496,6 +520,8 @@ def update_registered_case(case_id: str, fields: dict):
             setattr(case, key, value)
         session.add(case)
         session.commit()
+        session.refresh(case)
+    _backup_case_data(case, "registered")
 
 
 if __name__ == "__main__":

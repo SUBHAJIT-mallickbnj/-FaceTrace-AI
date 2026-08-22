@@ -146,9 +146,12 @@ GOOGLE_DRIVE_REFRESH_TOKEN = "your-oauth-refresh-token"
 GOOGLE_DRIVE_FOLDER_ID = "your-private-drive-folder-id"
 ```
 
-New admin and public images are written to PostgreSQL and Google Drive. If a database
-image is missing, the app downloads the matching `case-images/<case-id>.jpg` file
-from Drive, restores PostgreSQL, and displays it. Keep the Drive folder private.
+New admin and public images are written to PostgreSQL and Google Drive. Case metadata
+is also written as `case-data/registered-<case-id>.json` or
+`case-data/public-<case-id>.json`. Status and edited fields refresh the matching JSON
+backup. If a database image is missing, the app downloads the matching
+`case-images/<case-id>.jpg` file from Drive, restores PostgreSQL, and displays it.
+Keep the Drive folder private.
 Images deleted from both PostgreSQL and Drive cannot be reconstructed.
 
 ---

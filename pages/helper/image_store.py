@@ -74,6 +74,10 @@ def _file_name(case_id: str) -> str:
     return f"case-images/{case_id}.jpg"
 
 
+def _data_file_name(case_type: str, case_id: str) -> str:
+    return f"case-data/{case_type}-{case_id}.json"
+
+
 def backup_image(case_id: str, image_bytes: bytes) -> bool:
     settings = _settings()
     if settings is None:
@@ -110,6 +114,49 @@ def backup_image(case_id: str, image_bytes: bytes) -> bool:
         return True
     except Exception as exc:
         print(f"[WARNING] Google Drive backup failed for {case_id}: {exc}")
+        return False
+
+
+def backup_case_data(case_type: str, case_id: str, data: dict) -> bool:
+    """Back up case metadata as a JSON file in the configured Drive folder."""
+    settings = _settings()
+    if settings is None:
+        return False
+    try:
+        from googleapiclient.http import MediaIoBaseUpload
+
+        client = _client(settings)
+        name = _data_file_name(case_type, case_id)
+        query = (
+            f"name = '{name}' and '{settings['folder_id']}' in parents "
+            "and trashed = false"
+        )
+        files = client.files().list(
+            q=query,
+            fields="files(id)",
+            **_request_kwargs(settings),
+        ).execute().get("files", [])
+        payload = json.dumps(data, ensure_ascii=True, default=str).encode("utf-8")
+        media = MediaIoBaseUpload(
+            io.BytesIO(payload), mimetype="application/json", resumable=False
+        )
+        metadata = {"name": name, "parents": [settings["folder_id"]]}
+        if files:
+            client.files().update(
+                fileId=files[0]["id"],
+                media_body=media,
+                **_request_kwargs(settings),
+            ).execute()
+        else:
+            client.files().create(
+                body=metadata,
+                media_body=media,
+                fields="id",
+                **_request_kwargs(settings),
+            ).execute()
+        return True
+    except Exception as exc:
+        print(f"[WARNING] Google Drive data backup failed for {case_id}: {exc}")
         return False
 
 
