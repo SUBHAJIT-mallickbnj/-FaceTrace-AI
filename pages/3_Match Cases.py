@@ -2,7 +2,6 @@ import streamlit as st
 
 import pages.helper.db_queries as db_queries
 import pages.helper.match_algo as match_algo
-import pages.helper.train_model as train_model
 import pages.helper.emailer as emailer
 from pages.helper.utils import get_case_image_path, render_image, get_resources_dir
 
@@ -104,8 +103,7 @@ elif st.session_state["login_status"]:
         newly_confirmed = set()
 
         if refresh_bt:
-            with st.spinner("Fetching data and training model..."):
-                result = train_model.train(user)
+            with st.spinner("Fetching data and checking for matches..."):
                 matched_ids = match_algo.match()
 
                 if matched_ids["status"]:
