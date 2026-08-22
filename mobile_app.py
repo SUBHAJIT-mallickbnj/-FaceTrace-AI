@@ -8,6 +8,8 @@ import tempfile
 import streamlit as st
 from PIL import Image
 
+st.set_page_config("FaceTrace AI", initial_sidebar_state="collapsed")
+import pages.helper.db_queries as db_queries
 from pages.helper.data_models import PublicSubmissions
 from pages.helper.utils import (
     image_obj_to_numpy,
@@ -15,9 +17,6 @@ from pages.helper.utils import (
     extract_unique_faces_from_video,
     get_resources_dir,
 )
-
-st.set_page_config("FaceTrace AI", initial_sidebar_state="collapsed")
-import pages.helper.db_queries as db_queries
 
 db_queries.create_db()
 
