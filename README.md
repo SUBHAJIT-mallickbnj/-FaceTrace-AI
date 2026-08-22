@@ -135,12 +135,14 @@ The complainant's email entered during case registration is used as the recipien
 ### Recommended: Independent Google Drive image backup
 
 Images are stored in the shared PostgreSQL database and, when configured, in a
-private Google Drive folder. Create a Google Cloud service account, enable the
-Google Drive API, share the private Drive folder with the service-account email as
-an editor, and add these values to Streamlit Cloud secrets:
+private Google Drive folder. For a normal personal My Drive folder, use OAuth
+credentials because service accounts do not have personal Drive storage quota.
+Enable the Google Drive API and add these values to Streamlit Cloud secrets:
 
 ```
-GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON = '''paste-the-complete-service-account-json-here'''
+GOOGLE_DRIVE_CLIENT_ID = "your-oauth-client-id"
+GOOGLE_DRIVE_CLIENT_SECRET = "your-oauth-client-secret"
+GOOGLE_DRIVE_REFRESH_TOKEN = "your-oauth-refresh-token"
 GOOGLE_DRIVE_FOLDER_ID = "your-private-drive-folder-id"
 ```
 

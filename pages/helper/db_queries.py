@@ -148,7 +148,9 @@ def set_registered_case_image(case_id: str, image_data):
         session.add(case)
         session.commit()
     if image_bytes:
-        image_store.backup_image(str(case_id), image_bytes)
+        if not image_store.backup_image(str(case_id), image_bytes):
+            print(f"[WARNING] Registered image saved to PostgreSQL but not Google Drive: {case_id}")
+            st.warning("Image saved to PostgreSQL, but Google Drive backup failed. Check Drive credentials and folder access.")
 
 
 def get_registered_case_image(case_id: str) -> bytes | None:
@@ -279,7 +281,9 @@ def new_public_case(public_case_details: PublicSubmissions):
         session.commit()
         session.refresh(public_case_details)
     if image_bytes:
-        image_store.backup_image(str(public_case_details.id), image_bytes)
+        if not image_store.backup_image(str(public_case_details.id), image_bytes):
+            print(f"[WARNING] Public image saved to PostgreSQL but not Google Drive: {public_case_details.id}")
+            st.warning("Image saved to PostgreSQL, but Google Drive backup failed. Check Drive credentials and folder access.")
 
 
 def auto_confirm_public_matches():
