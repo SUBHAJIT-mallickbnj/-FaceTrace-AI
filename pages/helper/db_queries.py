@@ -168,8 +168,9 @@ def set_registered_case_image(case_id: str, image_data):
     _backup_case_data(case, "registered")
     if image_bytes:
         if not image_store.backup_image(str(case_id), image_bytes):
-            print(f"[WARNING] Registered image saved to PostgreSQL but not Google Drive: {case_id}")
-            st.warning("Image saved to PostgreSQL, but Google Drive backup failed. Check Drive credentials and folder access.")
+            detail = image_store.last_error() or "Drive credentials or folder access is not configured."
+            print(f"[WARNING] Registered image saved to PostgreSQL but not Google Drive: {detail}")
+            st.warning(f"Image saved to PostgreSQL, but Google Drive backup failed: {detail}")
 
 
 def get_registered_case_image(case_id: str) -> bytes | None:
@@ -302,8 +303,9 @@ def new_public_case(public_case_details: PublicSubmissions):
     _backup_case_data(public_case_details, "public")
     if image_bytes:
         if not image_store.backup_image(str(public_case_details.id), image_bytes):
-            print(f"[WARNING] Public image saved to PostgreSQL but not Google Drive: {public_case_details.id}")
-            st.warning("Image saved to PostgreSQL, but Google Drive backup failed. Check Drive credentials and folder access.")
+            detail = image_store.last_error() or "Drive credentials or folder access is not configured."
+            print(f"[WARNING] Public image saved to PostgreSQL but not Google Drive: {detail}")
+            st.warning(f"Image saved to PostgreSQL, but Google Drive backup failed: {detail}")
 
 
 def auto_confirm_public_matches():

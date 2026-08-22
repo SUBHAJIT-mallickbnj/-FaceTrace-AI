@@ -3,6 +3,9 @@ import io
 import json
 
 
+_last_error = None
+
+
 def _setting(name: str, default=None):
     value = os.getenv(name)
     if value:
@@ -70,6 +73,17 @@ def _request_kwargs(settings):
     return {"supportsAllDrives": True, "includeItemsFromAllDrives": True}
 
 
+def _write_request_kwargs():
+    """Return only parameters accepted by Drive create/update requests."""
+    return {"supportsAllDrives": True}
+
+
+def _record_error(operation: str, exc: Exception):
+    global _last_error
+    _last_error = f"{operation}: {exc}"
+    print(f"[WARNING] Google Drive {_last_error}")
+
+
 def _file_name(case_id: str) -> str:
     return f"case-images/{case_id}.jpg"
 
@@ -79,8 +93,17 @@ def _data_file_name(case_type: str, case_id: str) -> str:
 
 
 def backup_image(case_id: str, image_bytes: bytes) -> bool:
+    global _last_error
+    _last_error = None
     settings = _settings()
     if settings is None:
+        _record_error(
+            "image backup is not configured",
+            ValueError(
+                "set GOOGLE_DRIVE_FOLDER_ID and either OAuth credentials "
+                "or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON"
+            ),
+        )
         return False
     try:
         from googleapiclient.http import MediaIoBaseUpload
@@ -102,25 +125,34 @@ def backup_image(case_id: str, image_bytes: bytes) -> bool:
             client.files().update(
                 fileId=files[0]["id"],
                 media_body=media,
-                **_request_kwargs(settings),
+                **_write_request_kwargs(),
             ).execute()
         else:
             client.files().create(
                 body=metadata,
                 media_body=media,
                 fields="id",
-                **_request_kwargs(settings),
+                **_write_request_kwargs(),
             ).execute()
         return True
     except Exception as exc:
-        print(f"[WARNING] Google Drive backup failed for {case_id}: {exc}")
+        _record_error(f"image backup failed for {case_id}", exc)
         return False
 
 
 def backup_case_data(case_type: str, case_id: str, data: dict) -> bool:
     """Back up case metadata as a JSON file in the configured Drive folder."""
+    global _last_error
+    _last_error = None
     settings = _settings()
     if settings is None:
+        _record_error(
+            "data backup is not configured",
+            ValueError(
+                "set GOOGLE_DRIVE_FOLDER_ID and either OAuth credentials "
+                "or GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON"
+            ),
+        )
         return False
     try:
         from googleapiclient.http import MediaIoBaseUpload
@@ -156,8 +188,12 @@ def backup_case_data(case_type: str, case_id: str, data: dict) -> bool:
             ).execute()
         return True
     except Exception as exc:
-        print(f"[WARNING] Google Drive data backup failed for {case_id}: {exc}")
+        _record_error(f"data backup failed for {case_id}", exc)
         return False
+
+
+def last_error() -> str | None:
+    return _last_error
 
 
 def backup_configured() -> bool:
@@ -188,7 +224,7 @@ def restore_image(case_id: str) -> bytes | None:
         downloader = MediaIoBaseDownload(
             buffer,
             client.files().get_media(
-                fileId=files[0]["id"], **_request_kwargs(settings)
+                fileId=files[0]["id"], **_write_request_kwargs()
             ),
         )
         done = False
