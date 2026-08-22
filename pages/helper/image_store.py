@@ -1,6 +1,8 @@
 import os
 import io
 import json
+import re
+from urllib.parse import parse_qs, urlsplit
 
 
 _last_error = None
@@ -13,9 +15,34 @@ def _setting(name: str, default=None):
     try:
         import streamlit as st
 
-        return st.secrets.get(name, default)
+        value = st.secrets.get(name)
+        if value:
+            return value
+        section_names = {"google_drive", "GOOGLE_DRIVE"}
+        for section_name in section_names:
+            section = st.secrets.get(section_name)
+            if not section:
+                continue
+            for key in (name, name.lower(), name.removeprefix("GOOGLE_DRIVE_").lower()):
+                value = section.get(key) if hasattr(section, "get") else None
+                if value:
+                    return value
+        return default
     except Exception:
         return default
+
+
+def _folder_id(value) -> str | None:
+    """Accept a Drive folder ID or a folder URL pasted into secrets."""
+    if not value:
+        return None
+    value = str(value).strip()
+    if "drive.google.com" not in value:
+        return value
+    parsed = urlsplit(value)
+    query_id = parse_qs(parsed.query).get("id", [None])[0]
+    match = re.search(r"/folders/([A-Za-z0-9_-]+)", parsed.path)
+    return query_id or (match.group(1) if match else None)
 
 
 def _settings():
@@ -24,7 +51,7 @@ def _settings():
     client_id = _setting("GOOGLE_DRIVE_CLIENT_ID")
     client_secret = _setting("GOOGLE_DRIVE_CLIENT_SECRET")
     credentials = _setting("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON")
-    folder_id = _setting("GOOGLE_DRIVE_FOLDER_ID")
+    folder_id = _folder_id(_setting("GOOGLE_DRIVE_FOLDER_ID"))
     if not folder_id:
         return None
     if refresh_token and client_id and client_secret:
