@@ -14,6 +14,7 @@ import streamlit as st
 from pages.helper.data_models import RegisteredCases, PublicSubmissions
 from pages.helper.utils import get_database_path, get_resources_dir
 from pages.helper.map_utils import normalize_location
+from pages.helper import image_store
 
 def _get_database_url() -> str:
     """Use one hosted database in Cloud, with local SQLite as the fallback."""
@@ -108,6 +109,7 @@ def _backfill_image_data():
                 record = session.get(model, str(case_id))
                 if record is not None:
                     record.image_data = image_data
+                    image_store.backup_image(str(case_id), image_path.read_bytes())
         session.commit()
 
 
@@ -131,9 +133,13 @@ def register_new_case(case_details: RegisteredCases):
 def set_registered_case_image(case_id: str, image_data):
     """Persist a registered-case image as base64 in the shared database."""
     if isinstance(image_data, (bytes, bytearray, memoryview)):
-        image_data = base64.b64encode(bytes(image_data)).decode("ascii")
+        image_bytes = bytes(image_data)
+        image_data = base64.b64encode(image_bytes).decode("ascii")
     elif image_data:
         image_data = str(image_data)
+        image_bytes = _decode_image_data(image_data)
+    else:
+        image_bytes = None
     with Session(engine) as session:
         case = session.get(RegisteredCases, str(case_id))
         if case is None:
@@ -141,6 +147,8 @@ def set_registered_case_image(case_id: str, image_data):
         case.image_data = image_data
         session.add(case)
         session.commit()
+    if image_bytes:
+        image_store.backup_image(str(case_id), image_bytes)
 
 
 def get_registered_case_image(case_id: str) -> bytes | None:
@@ -150,13 +158,30 @@ def get_registered_case_image(case_id: str) -> bytes | None:
             select(RegisteredCases.image_data).where(RegisteredCases.id == str(case_id))
         ).first()
     if not image_data:
-        return None
+        restored = image_store.restore_image(str(case_id))
+        if restored:
+            set_registered_case_image(case_id, restored)
+        return restored
     if isinstance(image_data, (bytes, bytearray, memoryview)):
         return bytes(image_data)
     if isinstance(image_data, str) and image_data.startswith("data:"):
         image_data = image_data.split(",", 1)[-1]
     try:
-        return base64.b64decode(str(image_data).strip(), validate=True)
+        decoded = base64.b64decode(str(image_data).strip(), validate=True)
+        image_store.backup_image(str(case_id), decoded)
+        return decoded
+    except (TypeError, ValueError, base64.binascii.Error):
+        restored = image_store.restore_image(str(case_id))
+        if restored:
+            set_registered_case_image(case_id, restored)
+        return restored
+
+
+def _decode_image_data(image_data: str) -> bytes | None:
+    if image_data.startswith("data:"):
+        image_data = image_data.split(",", 1)[-1]
+    try:
+        return base64.b64decode(image_data.strip(), validate=True)
     except (TypeError, ValueError, base64.binascii.Error):
         return None
 
@@ -248,10 +273,13 @@ def new_public_case(public_case_details: PublicSubmissions):
         else:
             public_case_details.image_data = str(public_case_details.image_data)
 
+    image_bytes = _decode_image_data(public_case_details.image_data) if public_case_details.image_data else None
     with Session(engine) as session:
         session.add(public_case_details)
         session.commit()
         session.refresh(public_case_details)
+    if image_bytes:
+        image_store.backup_image(str(public_case_details.id), image_bytes)
 
 
 def auto_confirm_public_matches():
@@ -291,7 +319,10 @@ def get_public_case_image(case_id: str) -> bytes | None:
             select(PublicSubmissions.image_data).where(PublicSubmissions.id == case_id)
         ).first()
     if not image_data:
-        return None
+        restored = image_store.restore_image(str(case_id))
+        if restored:
+            _restore_public_case_image(case_id, restored)
+        return restored
 
     if isinstance(image_data, (bytes, bytearray, memoryview)):
         return bytes(image_data)
@@ -300,9 +331,23 @@ def get_public_case_image(case_id: str) -> bytes | None:
         image_data = image_data.split(",", 1)[-1]
 
     try:
-        return base64.b64decode(str(image_data).strip(), validate=True)
+        decoded = base64.b64decode(str(image_data).strip(), validate=True)
+        image_store.backup_image(str(case_id), decoded)
+        return decoded
     except (TypeError, ValueError, base64.binascii.Error):
-        return None
+        restored = image_store.restore_image(str(case_id))
+        if restored:
+            _restore_public_case_image(case_id, restored)
+        return restored
+
+
+def _restore_public_case_image(case_id: str, image_bytes: bytes):
+    with Session(engine) as session:
+        case = session.get(PublicSubmissions, str(case_id))
+        if case is not None:
+            case.image_data = base64.b64encode(image_bytes).decode("ascii")
+            session.add(case)
+            session.commit()
 
 
 def get_registered_case_id_for_public_case(public_case_id: str) -> str | None:

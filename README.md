@@ -132,6 +132,25 @@ SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
 ```
 The complainant's email entered during case registration is used as the recipient.
 
+### Recommended: Independent image backup
+
+Images are stored in the shared PostgreSQL database. For recovery if PostgreSQL loses
+an image, configure an independent S3-compatible bucket in Streamlit Cloud secrets:
+
+```
+IMAGE_BACKUP_BUCKET = "your-private-bucket"
+IMAGE_BACKUP_ACCESS_KEY = "your-access-key"
+IMAGE_BACKUP_SECRET_KEY = "your-secret-key"
+IMAGE_BACKUP_REGION = "auto"
+IMAGE_BACKUP_ENDPOINT_URL = "https://your-s3-endpoint" # omit for AWS S3
+```
+
+New admin and public images are written to PostgreSQL and the backup bucket. If a
+database image is missing, the app restores it from the bucket automatically. Keep
+the bucket private and enable versioning/retention according to your organisation's
+data policy. Images that were already deleted from both PostgreSQL and local storage
+cannot be reconstructed without another existing copy.
+
 ---
 
 ## Configuring Login Credentials

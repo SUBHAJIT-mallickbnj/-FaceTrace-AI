@@ -11,3 +11,4 @@ mediapipe==0.10.35
 streamlit-authenticator==0.4.2
 folium
 streamlit-folium
+boto3
