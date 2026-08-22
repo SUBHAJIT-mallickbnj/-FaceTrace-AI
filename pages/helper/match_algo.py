@@ -71,7 +71,7 @@ def _decode_feature(face_mesh):
             face_mesh = json.loads(face_mesh)
         if isinstance(face_mesh, dict):
             face_mesh = face_mesh.get("embedding") or face_mesh.get("landmarks")
-        feature = np.asarray(face_mesh, dtype=float).reshape(-1)
+        feature = np.asarray(face_mesh, dtype=np.float32).reshape(-1)
         return feature if feature.size else None
     except (TypeError, ValueError, json.JSONDecodeError):
         return None
@@ -105,20 +105,23 @@ def match(distance_threshold=IDENTITY_DISTANCE_THRESHOLD):
 
     for public_row in public_cases.itertuples(index=False):
         pub_label, public_feature = public_row
-        candidates = []
+        closest_distance = None
+        closest_label = None
         for registered_row in registered_cases.itertuples(index=False):
             reg_label, registered_feature = registered_row
             candidate_distance = _distance(public_feature, registered_feature)
-            if candidate_distance is not None:
-                candidates.append((candidate_distance, reg_label))
-        if not candidates:
+            if candidate_distance is not None and (
+                closest_distance is None or candidate_distance < closest_distance
+            ):
+                closest_distance = candidate_distance
+                closest_label = reg_label
+        if closest_distance is None:
             continue
-        closest_distance, reg_label = min(candidates)
         threshold = distance_threshold if public_feature.size == IDENTITY_FEATURE_LENGTH else LEGACY_DISTANCE_THRESHOLD
         diagnostics.append(
             {
                 "public_id": pub_label,
-                "registered_id": reg_label,
+                "registered_id": closest_label,
                 "distance": closest_distance,
                 "threshold": threshold,
                 "matched": closest_distance <= threshold,
@@ -126,8 +129,8 @@ def match(distance_threshold=IDENTITY_DISTANCE_THRESHOLD):
         )
         print(f"[DEBUG] Public case {pub_label}: closest_distance={closest_distance:.4f}, threshold={threshold}")
         if closest_distance <= threshold:
-            matched_images[reg_label].append((pub_label, closest_distance))
-            print(f"[INFO] Match found: public {pub_label} -> registered {reg_label} (distance={closest_distance:.4f})")
+            matched_images[closest_label].append((pub_label, closest_distance))
+            print(f"[INFO] Match found: public {pub_label} -> registered {closest_label} (distance={closest_distance:.4f})")
 
     print(f"[DEBUG] match: Total matches found: {len(matched_images)}")
     return {
