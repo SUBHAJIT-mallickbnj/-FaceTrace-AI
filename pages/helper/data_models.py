@@ -48,6 +48,7 @@ class RegisteredCases(SQLModel, table=True):
     status: str = Field(max_length=16, nullable=False)
     birth_marks: str = Field(max_length=512)
     matched_with: str = Field(nullable=True)
+    image_data: str = Field(nullable=True)  # Base64-encoded registered-case image
 
 
 if __name__ == "__main__":

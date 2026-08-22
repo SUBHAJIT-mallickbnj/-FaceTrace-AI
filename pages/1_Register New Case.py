@@ -192,6 +192,9 @@ if user is not None:
                         matched_with="",
                     )
                     db_queries.register_new_case(new_case_details)
+                    db_queries.set_registered_case_image(
+                        case_id, uploaded_file_path.read_bytes()
+                    )
                     
                     # Rename the image file to use case_id instead of upload_id
                     if upload_id and case_id:

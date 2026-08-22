@@ -43,8 +43,11 @@ def case_viewer(case, is_admin: bool = False):
             value = "Not Found"
         data_col.write(f"**{label}:** {value}")
 
+    registered_image = db_queries.get_registered_case_image(case_id)
     image_path = get_case_image_path(case_id)
-    if image_path:
+    if registered_image:
+        image_col.image(registered_image, width=120)
+    elif image_path:
         image_col.image(str(image_path), width=120)
     else:
         image_col.caption("No image")
@@ -115,10 +118,11 @@ def public_case_viewer(case: list) -> None:
             value = "Found" if value == "F" else "Not Found"
         data_col.write(f"**{label}:** {value}")
 
-    image_path = get_case_image_path(case_id)
     public_image = db_queries.get_public_case_image(case_id)
     if public_image:
         image_col.image(public_image, width=120)
+    elif (image_path := get_case_image_path(case_id)):
+        image_col.image(str(image_path), width=120)
     elif image_path:
         image_col.image(str(image_path), width=120)
     else:

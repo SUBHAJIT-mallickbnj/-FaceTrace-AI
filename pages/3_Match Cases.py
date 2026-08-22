@@ -58,8 +58,11 @@ def case_viewer(
         else:
             st.info("✅ Confirmed match from the public portal. Case is already Found.")
 
+        registered_image_data = db_queries.get_registered_case_image(registered_case_id)
         registered_image = get_case_image_path(registered_case_id)
-        if registered_image:
+        if registered_image_data:
+            image_col.image(registered_image_data, width=160)
+        elif registered_image:
             image_col.image(str(registered_image), width=160)
 
         public_image = db_queries.get_public_case_image(public_case_id)

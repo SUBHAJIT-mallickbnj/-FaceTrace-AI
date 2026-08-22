@@ -60,8 +60,9 @@ engine = create_engine(database_url, **engine_options)
 def create_db():
     RegisteredCases.__table__.create(engine, checkfirst=True)
     PublicSubmissions.__table__.create(engine, checkfirst=True)
-    # Add new columns to existing tables if they don't exist (SQLite migration)
+    # Add new columns to existing databases without dropping data.
     _migrate_db()
+    _backfill_image_data()
 
 
 def _migrate_db():
@@ -73,6 +74,7 @@ def _migrate_db():
         ("registeredcases", "latitude", "REAL"),
         ("registeredcases", "longitude", "REAL"),
         ("publicsubmissions", "image_data", "TEXT"),
+        ("registeredcases", "image_data", "TEXT"),
     ]
     inspector = inspect(engine)
     with engine.begin() as connection:
@@ -82,6 +84,31 @@ def _migrate_db():
             existing_columns = {item["name"] for item in inspector.get_columns(table)}
             if column not in existing_columns:
                 connection.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {col_type}"))
+
+
+def _backfill_image_data():
+    """Copy still-available local images into durable database storage once."""
+    resources_dir = get_resources_dir()
+    with Session(engine) as session:
+        registered_rows = session.exec(
+            select(RegisteredCases.id).where(RegisteredCases.image_data.is_(None))
+        ).all()
+        public_rows = session.exec(
+            select(PublicSubmissions.id).where(PublicSubmissions.image_data.is_(None))
+        ).all()
+        for model, rows in (
+            (RegisteredCases, registered_rows),
+            (PublicSubmissions, public_rows),
+        ):
+            for case_id in rows:
+                image_path = resources_dir / f"{case_id}.jpg"
+                if not image_path.exists():
+                    continue
+                image_data = base64.b64encode(image_path.read_bytes()).decode("ascii")
+                record = session.get(model, str(case_id))
+                if record is not None:
+                    record.image_data = image_data
+        session.commit()
 
 
 def register_new_case(case_details: RegisteredCases):
@@ -99,6 +126,39 @@ def register_new_case(case_details: RegisteredCases):
         except Exception:
             session.rollback()
             raise
+
+
+def set_registered_case_image(case_id: str, image_data):
+    """Persist a registered-case image as base64 in the shared database."""
+    if isinstance(image_data, (bytes, bytearray, memoryview)):
+        image_data = base64.b64encode(bytes(image_data)).decode("ascii")
+    elif image_data:
+        image_data = str(image_data)
+    with Session(engine) as session:
+        case = session.get(RegisteredCases, str(case_id))
+        if case is None:
+            raise ValueError(f"Registered case not found: {case_id}")
+        case.image_data = image_data
+        session.add(case)
+        session.commit()
+
+
+def get_registered_case_image(case_id: str) -> bytes | None:
+    """Return a registered-case image from durable database storage."""
+    with Session(engine) as session:
+        image_data = session.exec(
+            select(RegisteredCases.image_data).where(RegisteredCases.id == str(case_id))
+        ).first()
+    if not image_data:
+        return None
+    if isinstance(image_data, (bytes, bytearray, memoryview)):
+        return bytes(image_data)
+    if isinstance(image_data, str) and image_data.startswith("data:"):
+        image_data = image_data.split(",", 1)[-1]
+    try:
+        return base64.b64decode(str(image_data).strip(), validate=True)
+    except (TypeError, ValueError, base64.binascii.Error):
+        return None
 
 
 def fetch_registered_cases(submitted_by: str, status: str):

@@ -114,3 +114,74 @@ def test_public_submission_accepts_raw_bytes_and_data_urls():
             )
 
         temp_engine.dispose()
+
+
+def test_registered_case_image_is_persisted_and_retrieved():
+    with TemporaryDirectory() as tmpdir:
+        temp_db = Path(tmpdir) / "test.db"
+        temp_engine = create_engine(f"sqlite:///{temp_db}")
+        SQLModel.metadata.create_all(temp_engine)
+        registered = RegisteredCases(
+            id="registered-image-id",
+            submitted_by="admin",
+            name="Missing Person",
+            complainant_name="Family",
+            complainant_mobile="1234567890",
+            adhaar_card="123456789012",
+            last_seen="Delhi",
+            address="Delhi",
+            face_mesh="[1, 2, 3]",
+            status="NF",
+            birth_marks="",
+        )
+
+        with patch.object(db_queries, "engine", temp_engine):
+            db_queries.register_new_case(registered)
+            db_queries.set_registered_case_image(
+                "registered-image-id", b"registered-jpeg-bytes"
+            )
+            assert (
+                db_queries.get_registered_case_image("registered-image-id")
+                == b"registered-jpeg-bytes"
+            )
+
+        temp_engine.dispose()
+
+
+def test_existing_local_registered_image_is_backfilled_to_database():
+    with TemporaryDirectory() as tmpdir:
+        temp_db = Path(tmpdir) / "test.db"
+        resources_dir = Path(tmpdir) / "resources"
+        resources_dir.mkdir()
+        temp_engine = create_engine(f"sqlite:///{temp_db}")
+        SQLModel.metadata.create_all(temp_engine)
+        registered = RegisteredCases(
+            id="legacy-registered-image-id",
+            submitted_by="admin",
+            name="Missing Person",
+            complainant_name="Family",
+            complainant_mobile="1234567890",
+            adhaar_card="123456789012",
+            last_seen="Delhi",
+            address="Delhi",
+            face_mesh="[1, 2, 3]",
+            status="NF",
+            birth_marks="",
+        )
+        with db_queries.Session(temp_engine) as session:
+            session.add(registered)
+            session.commit()
+        (resources_dir / "legacy-registered-image-id.jpg").write_bytes(
+            b"legacy-jpeg-bytes"
+        )
+
+        with patch.object(db_queries, "engine", temp_engine), patch.object(
+            db_queries, "get_resources_dir", return_value=resources_dir
+        ):
+            db_queries._backfill_image_data()
+            assert (
+                db_queries.get_registered_case_image("legacy-registered-image-id")
+                == b"legacy-jpeg-bytes"
+            )
+
+        temp_engine.dispose()
