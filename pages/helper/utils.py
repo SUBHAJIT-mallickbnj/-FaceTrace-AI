@@ -237,41 +237,44 @@ def detect_all_faces(image: np.ndarray, max_faces: int = 5):
         }
     Returns an empty list if no faces are found.
     """
-    _ensure_model()
     image = _normalize_image(image)
     h, w = image.shape[:2]
+    result = None
+    detection_errors = []
 
     try:
+        _ensure_model()
         detector = _build_detector(num_faces=max_faces)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image)
         result = detector.detect(mp_image)
         detector.close()
     except Exception as e:
-        st.error(f"❌ Face detection failed: {e}")
-        return []
+        detection_errors.append(str(e))
 
     faces = []
-    try:
-        identity_embeddings = extract_face_embeddings(image)
-    except Exception:
-        identity_embeddings = []
-    for lm_list in result.face_landmarks:
-        xs = [lm.x * w for lm in lm_list]
-        ys = [lm.y * h for lm in lm_list]
-        padding = 0.08 * max(w, h)
-        bbox = (
-            max(0, int(min(xs) - padding)),
-            max(0, int(min(ys) - padding)),
-            min(w, int(max(xs) + padding)),
-            min(h, int(max(ys) + padding)),
-        )
-        landmarks_flat = [coord for lm in lm_list for coord in (lm.x, lm.y, lm.z)]
-        embedding = None
-        if len(identity_embeddings) == len(result.face_landmarks):
-            embedding = identity_embeddings[len(faces)]
-        faces.append(
-            {"landmarks": landmarks_flat, "bbox": bbox, "embedding": embedding}
-        )
+    if result is not None:
+        try:
+            identity_embeddings = extract_face_embeddings(image)
+        except Exception as exc:
+            identity_embeddings = []
+            detection_errors.append(str(exc))
+        for lm_list in result.face_landmarks:
+            xs = [lm.x * w for lm in lm_list]
+            ys = [lm.y * h for lm in lm_list]
+            padding = 0.08 * max(w, h)
+            bbox = (
+                max(0, int(min(xs) - padding)),
+                max(0, int(min(ys) - padding)),
+                min(w, int(max(xs) + padding)),
+                min(h, int(max(ys) + padding)),
+            )
+            landmarks_flat = [coord for lm in lm_list for coord in (lm.x, lm.y, lm.z)]
+            embedding = None
+            if len(identity_embeddings) == len(result.face_landmarks):
+                embedding = identity_embeddings[len(faces)]
+            faces.append(
+                {"landmarks": landmarks_flat, "bbox": bbox, "embedding": embedding}
+            )
 
     if not faces:
         try:
@@ -286,7 +289,9 @@ def detect_all_faces(image: np.ndarray, max_faces: int = 5):
                     }
                 )
         except Exception as exc:
-            st.warning(f"Face detector fallback failed: {exc}")
+            detection_errors.append(str(exc))
+    if not faces and detection_errors:
+        st.warning("Face detection is unavailable in this environment. Please try again with a clear, front-facing photo.")
     return faces
 
 

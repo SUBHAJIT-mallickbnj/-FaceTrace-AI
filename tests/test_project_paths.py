@@ -1,7 +1,15 @@
 import unittest
+from unittest.mock import patch
+
+import numpy as np
 
 from pages.helper.db_queries import get_database_path
-from pages.helper.utils import get_login_config_path, get_project_root, get_resources_dir
+from pages.helper.utils import (
+    detect_all_faces,
+    get_login_config_path,
+    get_project_root,
+    get_resources_dir,
+)
 
 
 class ProjectPathTests(unittest.TestCase):
@@ -22,6 +30,24 @@ class ProjectPathTests(unittest.TestCase):
         self.assertTrue(str(db_path).startswith(str(root)))
         self.assertTrue(str(resources_dir).startswith(str(root)))
         self.assertTrue(str(login_config_path).startswith(str(root)))
+
+    def test_opencv_fallback_runs_when_mediapipe_native_library_fails(self):
+        fallback_face = {
+            "bbox": (1, 2, 30, 40),
+            "embedding": [0.1, 0.2],
+        }
+        with patch("pages.helper.utils._ensure_model"), patch(
+            "pages.helper.utils._build_detector",
+            side_effect=OSError("libGLESv2.so.2: cannot open shared object file"),
+        ), patch(
+            "pages.helper.utils._detect_identity_faces",
+            return_value=[fallback_face],
+        ):
+            faces = detect_all_faces(np.zeros((50, 50, 3), dtype=np.uint8))
+
+        self.assertEqual(faces, [
+            {"landmarks": [], "bbox": (1, 2, 30, 40), "embedding": [0.1, 0.2]}
+        ])
 
 
 if __name__ == "__main__":

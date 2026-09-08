@@ -16,6 +16,7 @@ from pages.helper.utils import (
     extract_face_mesh_landmarks,
     extract_unique_faces_from_video,
     get_resources_dir,
+    render_image,
 )
 
 db_queries.create_db()
@@ -297,7 +298,7 @@ if upload_mode == "Image":
             face_mesh = st.session_state.get("public_image_face_mesh")
             image_data = st.session_state.get("public_image_data")
             image_obj.seek(0)
-            st.image(image_obj, caption="📷 Uploaded Photo", width="stretch")
+            render_image(image_obj, caption="📷 Uploaded Photo", width="stretch")
 
             if face_mesh is None:
                 st.markdown("""
