@@ -23,9 +23,6 @@ except ImportError:
     mp_vision = None
 else:
     _MEDIAPIPE_IMPORT_ERROR = ""
-from streamlit.elements.image import ImageMixin
-
-
 def _normalize_streamlit_kwargs(func, kwargs: dict) -> dict:
     """Translate newer Streamlit kwargs to the names supported by this environment."""
     if not kwargs:
@@ -48,7 +45,7 @@ def _normalize_streamlit_kwargs(func, kwargs: dict) -> dict:
 
 
 def render_image(*args, **kwargs):
-    return st.image(*args, **_normalize_streamlit_kwargs(ImageMixin.image, kwargs))
+    return st.image(*args, **_normalize_streamlit_kwargs(st.image, kwargs))
 
 
 def render_dataframe(data, **kwargs):
