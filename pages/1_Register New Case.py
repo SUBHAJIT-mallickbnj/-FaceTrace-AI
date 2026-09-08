@@ -16,8 +16,6 @@ from pages.helper.utils import (
     render_image,
 )
 
-st.set_page_config(page_title="Register New Case")
-
 if not is_user_authenticated(st.session_state):
     st.info("Login is required to register a case. Please open the Home page and sign in first.")
     user = None
