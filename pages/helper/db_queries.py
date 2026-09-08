@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import inspect, text
 from sqlalchemy.pool import NullPool
 from sqlmodel import create_engine, Session, select
@@ -46,21 +47,35 @@ def _normalize_database_url(configured_url: str) -> str:
     return urlunsplit(parsed._replace(query=urlencode(query)))
 
 
+def _create_engine(url: str):
+    options = {
+        "pool_pre_ping": True,
+        "connect_args": {"check_same_thread": False}
+        if url.startswith("sqlite")
+        else {},
+    }
+    if not url.startswith("sqlite"):
+        options["poolclass"] = NullPool
+    return create_engine(url, **options)
+
+
 database_url = _get_database_url()
-engine_options = {
-    "pool_pre_ping": True,
-    "connect_args": {"check_same_thread": False}
-    if database_url.startswith("sqlite")
-    else {},
-}
-if not database_url.startswith("sqlite"):
-    engine_options["poolclass"] = NullPool
-engine = create_engine(database_url, **engine_options)
+engine = _create_engine(database_url)
 
 
 def create_db():
-    RegisteredCases.__table__.create(engine, checkfirst=True)
-    PublicSubmissions.__table__.create(engine, checkfirst=True)
+    global database_url, engine
+    try:
+        RegisteredCases.__table__.create(engine, checkfirst=True)
+        PublicSubmissions.__table__.create(engine, checkfirst=True)
+    except SQLAlchemyError as exc:
+        if database_url.startswith("sqlite"):
+            raise
+        database_url = f"sqlite:///{get_database_path().resolve().as_posix()}"
+        engine = _create_engine(database_url)
+        print(f"[WARNING] Hosted database unavailable; using local SQLite fallback: {exc}")
+        RegisteredCases.__table__.create(engine, checkfirst=True)
+        PublicSubmissions.__table__.create(engine, checkfirst=True)
     # Add new columns to existing databases without dropping data.
     _migrate_db()
     _backfill_image_data()
