@@ -125,6 +125,7 @@ if user is not None:
             mobile_number = st.text_input("Mobile Number (10 digits)")
             adhaar_card = st.text_input("Aadhaar Card (12 digits)")
             address = st.text_input("Address")
+            pincode = st.text_input("Pincode * (6 digits)")
             city = st.text_input("City *")
             birthmarks = st.text_input("Birth Marks")
             last_seen = st.text_input("Last Seen *")
@@ -143,6 +144,8 @@ if user is not None:
                     errors.append("❌ Name is required.")
                 if not last_seen.strip():
                     errors.append("❌ Last Seen location is required.")
+                if not pincode.strip().isdigit() or len(pincode.strip()) != 6:
+                    errors.append("❌ Pincode must be exactly 6 digits.")
                 if not complainant_name.strip():
                     errors.append("❌ Complainant Name is required.")
                 if not complainant_phone.strip():
@@ -173,7 +176,10 @@ if user is not None:
                         st.stop()
                     case_id = str(uuid.uuid4())
                     map_latitude, map_longitude = geocode_location(
-                        city.strip(), last_seen.strip(), address.strip()
+                        city.strip(),
+                        last_seen.strip(),
+                        address.strip(),
+                        pincode.strip(),
                     )
                     new_case_details = RegisteredCases(
                         id=case_id,
@@ -188,6 +194,7 @@ if user is not None:
                         adhaar_card=adhaar_card.strip(),
                         birth_marks=birthmarks.strip(),
                         address=address.strip(),
+                        pincode=pincode.strip(),
                         city=city.strip() or None,
                         latitude=map_latitude,
                         longitude=map_longitude,

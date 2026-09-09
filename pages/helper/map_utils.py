@@ -136,9 +136,18 @@ def geocode_last_seen_location(last_seen: str | None):
 
 
 @lru_cache(maxsize=256)
-def geocode_location(city: str | None, last_seen: str | None, address: str | None):
+def geocode_location(
+    city: str | None,
+    last_seen: str | None,
+    address: str | None,
+    pincode: str | None = None,
+):
     """Best-effort address geocoding with a short timeout and city fallback."""
-    query = ", ".join(value.strip() for value in (address, last_seen, city, "India") if value)
+    query = ", ".join(
+        value.strip()
+        for value in (address, pincode, last_seen, city, "India")
+        if value and value.strip()
+    )
     if query:
         try:
             request = Request(

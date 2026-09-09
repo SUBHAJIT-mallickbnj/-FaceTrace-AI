@@ -96,6 +96,7 @@ def _migrate_db():
         ("registeredcases", "complainant_email", "TEXT"),
         ("registeredcases", "city", "TEXT"),
         ("registeredcases", "description", "TEXT"),
+        ("registeredcases", "pincode", "TEXT"),
         ("registeredcases", "latitude", "REAL"),
         ("registeredcases", "longitude", "REAL"),
         ("publicsubmissions", "image_data", "TEXT"),

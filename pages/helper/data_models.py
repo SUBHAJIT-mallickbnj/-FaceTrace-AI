@@ -38,6 +38,7 @@ class RegisteredCases(SQLModel, table=True):
     adhaar_card: str = Field(max_length=12)
     last_seen: str = Field(max_length=64)
     address: str = Field(max_length=512)
+    pincode: str = Field(max_length=10, nullable=True, default=None)
     city: str = Field(max_length=64, nullable=True, default=None)
     latitude: float | None = Field(default=None, nullable=True)
     longitude: float | None = Field(default=None, nullable=True)

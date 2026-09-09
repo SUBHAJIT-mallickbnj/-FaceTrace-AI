@@ -61,10 +61,12 @@ class MapUtilsTests(unittest.TestCase):
                 "Srinagar, Kashmir",
                 "Srinagar, Kashmir, India",
                 "Lal Chowk, 190001",
+                "190001",
             )
 
         request = urlopen.call_args.args[0]
         self.assertIn("Lal+Chowk%2C+190001", request.full_url)
+        self.assertIn("190001", request.full_url)
         self.assertIn("Srinagar%2C+Kashmir%2C+India", request.full_url)
 
 
