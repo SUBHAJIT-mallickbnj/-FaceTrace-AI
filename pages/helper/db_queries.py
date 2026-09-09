@@ -70,7 +70,9 @@ def _normalize_database_url(configured_url: str) -> str:
         # so use transaction pooling instead.
         if parsed.port == 5432:
             parsed = parsed._replace(netloc=parsed.netloc.rsplit(":", 1)[0] + ":6543")
-        query.setdefault("prepare_threshold", "0")
+        # Psycopg uses 0 to prepare immediately; omit this URL option and pass
+        # None through connect_args to disable prepared statements for pgbouncer.
+        query.pop("prepare_threshold", None)
     query.setdefault("sslmode", "require")
     query.setdefault("connect_timeout", "10")
     return urlunsplit(parsed._replace(query=urlencode(query)))
@@ -79,7 +81,7 @@ def _normalize_database_url(configured_url: str) -> str:
 def _create_engine(url: str):
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {
         # Supabase transaction poolers do not support prepared statements.
-        "prepare_threshold": 0,
+        "prepare_threshold": None,
     }
     options = {
         "pool_pre_ping": True,

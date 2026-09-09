@@ -34,14 +34,13 @@ class ProjectPathTests(unittest.TestCase):
             "@aws-0-ap-northeast-1.pooler.supabase.com:6543/",
             url,
         )
-        self.assertIn("prepare_threshold=0", url)
 
     def test_postgres_engine_disables_prepared_statements_at_driver_level(self):
         with patch("pages.helper.db_queries.create_engine") as create_engine:
             _create_engine("postgresql+psycopg://user:password@host/db")
 
         options = create_engine.call_args.kwargs
-        self.assertEqual(options["connect_args"]["prepare_threshold"], 0)
+        self.assertIsNone(options["connect_args"]["prepare_threshold"])
 
     def test_database_url_strips_secret_wrapping_quotes(self):
         url = _normalize_database_url(
@@ -56,7 +55,6 @@ class ProjectPathTests(unittest.TestCase):
         )
 
         self.assertIn("@aws-0-region.pooler.supabase.com:6543/", url)
-        self.assertIn("prepare_threshold=0", url)
 
     def test_project_root_points_to_repo_root(self):
         root = get_project_root()
