@@ -20,6 +20,13 @@ class ProjectPathTests(unittest.TestCase):
         options = create_engine.call_args.kwargs
         self.assertEqual(options["connect_args"]["prepare_threshold"], 0)
 
+    def test_database_url_strips_secret_wrapping_quotes(self):
+        url = _normalize_database_url(
+            ' "postgresql://user:password@host/db" '
+        )
+
+        self.assertTrue(url.startswith("postgresql+psycopg://"))
+
     def test_supabase_pooler_uses_transaction_mode_for_streamlit(self):
         url = _normalize_database_url(
             "postgresql://user:password@aws-0-region.pooler.supabase.com:5432/db"

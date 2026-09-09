@@ -3,6 +3,7 @@ import uuid
 import os
 import base64
 import threading
+import time
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -40,6 +41,7 @@ def _get_database_url() -> str:
 
 def _normalize_database_url(configured_url: str) -> str:
     """Normalize PostgreSQL URLs for psycopg and serverless Streamlit apps."""
+    configured_url = configured_url.strip().strip('"').strip("'")
     if configured_url.startswith("postgres://"):
         configured_url = configured_url.replace("postgres://", "postgresql://", 1)
     if not configured_url.startswith("postgresql"):
@@ -83,6 +85,21 @@ _database_init_lock = threading.Lock()
 _initialized_engine_id = None
 
 
+def _database_failure_detail(exc: Exception) -> str:
+    message = str(exc).lower()
+    if "max clients" in message or "too many connections" in message:
+        return "Supabase connection limit reached; transaction pooling is required."
+    if "password authentication failed" in message or "authentication failed" in message:
+        return "PostgreSQL authentication failed; verify DATABASE_URL credentials."
+    if "could not translate host name" in message or "name or service not known" in message:
+        return "DATABASE_URL hostname could not be resolved."
+    if "timeout" in message or "timed out" in message:
+        return "Supabase connection timed out; verify the pooler host and port 6543."
+    if "ssl" in message or "certificate" in message:
+        return "Supabase SSL negotiation failed; DATABASE_URL must use sslmode=require."
+    return "Check DATABASE_URL format, Supabase project status, and Streamlit secrets."
+
+
 def create_db():
     """Initialize the active database once per process and engine instance."""
     global database_url, engine, _initialized_engine_id
@@ -93,19 +110,27 @@ def create_db():
     with _database_init_lock:
         if _initialized_engine_id == engine_id:
             return
-        try:
-            with engine.connect() as connection:
-                connection.execute(text("SELECT 1"))
-            RegisteredCases.__table__.create(engine, checkfirst=True)
-            PublicSubmissions.__table__.create(engine, checkfirst=True)
-        except SQLAlchemyError as exc:
+        last_error = None
+        for attempt in range(3):
+            try:
+                with engine.begin() as connection:
+                    connection.execute(text("SELECT 1"))
+                    RegisteredCases.__table__.create(connection, checkfirst=True)
+                    PublicSubmissions.__table__.create(connection, checkfirst=True)
+                break
+            except SQLAlchemyError as exc:
+                last_error = exc
+                if attempt < 2:
+                    time.sleep(1 + attempt)
+        else:
             if not database_url.startswith("sqlite"):
+                detail = _database_failure_detail(last_error)
                 raise RuntimeError(
-                    "The configured DATABASE_URL is unavailable. Fix the same "
-                    "PostgreSQL secret in both Streamlit apps; local SQLite fallback "
-                    "is disabled to prevent public and admin data from diverging."
-                ) from exc
-            raise
+                    "The configured DATABASE_URL is unavailable after 3 attempts. "
+                    f"{detail} Both Streamlit apps must use the same working "
+                    "PostgreSQL secret; SQLite fallback is disabled."
+                ) from last_error
+            raise last_error
         # Add new columns to existing databases without dropping data.
         _migrate_db()
         _backfill_image_data()

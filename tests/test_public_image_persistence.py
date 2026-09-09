@@ -193,7 +193,7 @@ def test_existing_local_registered_image_is_backfilled_to_database():
 
 def test_configured_database_failure_does_not_fallback_to_sqlite():
     class FailingEngine:
-        def connect(self):
+        def begin(self):
             raise SQLAlchemyError("database unavailable")
 
     original_engine = db_queries.engine
@@ -211,7 +211,7 @@ def test_configured_database_failure_does_not_fallback_to_sqlite():
 
 def test_database_initialization_runs_once_per_engine():
     fake_engine = MagicMock()
-    fake_connection = fake_engine.connect.return_value.__enter__.return_value
+    fake_connection = fake_engine.begin.return_value.__enter__.return_value
     original_engine = db_queries.engine
     original_url = db_queries.database_url
     original_initialized_engine_id = db_queries._initialized_engine_id
@@ -227,7 +227,7 @@ def test_database_initialization_runs_once_per_engine():
             db_queries.create_db()
             db_queries.create_db()
 
-        assert fake_engine.connect.call_count == 1
+        assert fake_engine.begin.call_count == 1
         fake_connection.execute.assert_called_once()
     finally:
         db_queries.engine = original_engine
