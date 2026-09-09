@@ -17,8 +17,7 @@ from pages.helper.utils import get_database_path, get_resources_dir
 from pages.helper.map_utils import normalize_location
 from pages.helper import image_store
 
-def _get_database_url() -> str:
-    """Use one hosted database in Cloud, with local SQLite as the fallback."""
+def _get_configured_database_url() -> str | None:
     try:
         configured_url = st.secrets.get("DATABASE_URL")
     except Exception:
@@ -26,6 +25,14 @@ def _get_database_url() -> str:
     configured_url = configured_url or os.getenv("DATABASE_URL")
     if configured_url:
         return _normalize_database_url(str(configured_url))
+    return None
+
+
+def _get_database_url() -> str:
+    """Use the configured shared database, with SQLite only for local development."""
+    configured_url = _get_configured_database_url()
+    if configured_url:
+        return configured_url
     return f"sqlite:///{get_database_path().resolve().as_posix()}"
 
 
@@ -66,16 +73,18 @@ engine = _create_engine(database_url)
 def create_db():
     global database_url, engine
     try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
         RegisteredCases.__table__.create(engine, checkfirst=True)
         PublicSubmissions.__table__.create(engine, checkfirst=True)
     except SQLAlchemyError as exc:
-        if database_url.startswith("sqlite"):
-            raise
-        database_url = f"sqlite:///{get_database_path().resolve().as_posix()}"
-        engine = _create_engine(database_url)
-        print(f"[WARNING] Hosted database unavailable; using local SQLite fallback: {exc}")
-        RegisteredCases.__table__.create(engine, checkfirst=True)
-        PublicSubmissions.__table__.create(engine, checkfirst=True)
+        if not database_url.startswith("sqlite"):
+            raise RuntimeError(
+                "The configured DATABASE_URL is unavailable. Fix the same "
+                "PostgreSQL secret in both Streamlit apps; local SQLite fallback "
+                "is disabled to prevent public and admin data from diverging."
+            ) from exc
+        raise
     # Add new columns to existing databases without dropping data.
     _migrate_db()
     _backfill_image_data()

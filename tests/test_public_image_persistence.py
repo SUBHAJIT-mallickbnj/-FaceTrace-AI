@@ -1,8 +1,11 @@
 import base64
+import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import pytest
+from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import SQLModel, create_engine
 
 from pages.helper import db_queries
@@ -183,5 +186,68 @@ def test_existing_local_registered_image_is_backfilled_to_database():
                 db_queries.get_registered_case_image("legacy-registered-image-id")
                 == b"legacy-jpeg-bytes"
             )
+
+        temp_engine.dispose()
+
+
+def test_configured_database_failure_does_not_fallback_to_sqlite():
+    class FailingEngine:
+        def connect(self):
+            raise SQLAlchemyError("database unavailable")
+
+    original_engine = db_queries.engine
+    original_url = db_queries.database_url
+    try:
+        db_queries.engine = FailingEngine()
+        db_queries.database_url = "postgresql+psycopg://configured-host/db"
+        with pytest.raises(RuntimeError, match="SQLite fallback is disabled"):
+            db_queries.create_db()
+        assert db_queries.database_url.startswith("postgresql")
+    finally:
+        db_queries.engine = original_engine
+        db_queries.database_url = original_url
+
+
+def test_public_submission_auto_confirms_matching_registered_case():
+    with TemporaryDirectory() as tmpdir:
+        temp_db = Path(tmpdir) / "test.db"
+        temp_engine = create_engine(f"sqlite:///{temp_db}")
+        SQLModel.metadata.create_all(temp_engine)
+        embedding = [1.0, 0.0] + [0.0] * 126
+        registered = RegisteredCases(
+            id="matching-case-id",
+            submitted_by="admin",
+            name="Missing Person",
+            complainant_name="Family",
+            complainant_mobile="1234567890",
+            adhaar_card="123456789012",
+            last_seen="Delhi",
+            address="Delhi",
+            face_mesh=json.dumps(embedding),
+            status="NF",
+            birth_marks="",
+        )
+        public = PublicSubmissions(
+            id="matching-sighting-id",
+            submitted_by="reporter",
+            face_mesh=json.dumps(embedding),
+            location="Delhi",
+            mobile="9876543210",
+            status="NF",
+            image_data=base64.b64encode(b"photo").decode("ascii"),
+        )
+
+        with patch.object(db_queries, "engine", temp_engine):
+            db_queries.register_new_case(registered)
+            db_queries.new_public_case(public)
+            assert db_queries.auto_confirm_public_matches() == [
+                ("matching-case-id", "matching-sighting-id")
+            ]
+            with db_queries.Session(temp_engine) as session:
+                saved_registered = session.get(RegisteredCases, "matching-case-id")
+                saved_public = session.get(PublicSubmissions, "matching-sighting-id")
+                assert saved_registered.status == "F"
+                assert saved_registered.matched_with == "matching-sighting-id"
+                assert saved_public.status == "F"
 
         temp_engine.dispose()
