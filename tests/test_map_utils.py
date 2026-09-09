@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 from pages.helper.map_utils import (
     geocode_last_seen_location,
+    geocode_location,
     resolve_case_map_coordinate,
     separate_overlapping_coordinate,
 )
@@ -51,6 +52,20 @@ class MapUtilsTests(unittest.TestCase):
             coords = geocode_last_seen_location("SRINAGAR, KASHMIR, INDIA")
 
         self.assertEqual(coords, (34.0837, 74.7973))
+
+    def test_map_geocodes_complete_address_when_coordinates_are_missing(self):
+        response = MagicMock()
+        response.__enter__.return_value.read.return_value = "[]"
+        with patch("pages.helper.map_utils.urlopen", return_value=response) as urlopen:
+            geocode_location(
+                "Srinagar, Kashmir",
+                "Srinagar, Kashmir, India",
+                "Lal Chowk, 190001",
+            )
+
+        request = urlopen.call_args.args[0]
+        self.assertIn("Lal+Chowk%2C+190001", request.full_url)
+        self.assertIn("Srinagar%2C+Kashmir%2C+India", request.full_url)
 
 
 if __name__ == "__main__":

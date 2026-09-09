@@ -109,10 +109,10 @@ def resolve_case_map_coordinate(
     latitude: float | None = None,
     longitude: float | None = None,
 ):
-    """Prefer stored coordinates, then geocode the victim's last-seen location."""
+    """Prefer stored coordinates, then geocode the complete last-seen address."""
     if latitude is not None and longitude is not None:
         return float(latitude), float(longitude)
-    return geocode_last_seen_location(last_seen) or CITY_COORDS["Unknown"]
+    return geocode_location(city, last_seen, address)
 
 
 @lru_cache(maxsize=256)

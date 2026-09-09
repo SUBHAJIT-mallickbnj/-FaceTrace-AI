@@ -172,6 +172,9 @@ if user is not None:
                         st.error("The uploaded image is no longer available. Please upload it again.")
                         st.stop()
                     case_id = str(uuid.uuid4())
+                    map_latitude, map_longitude = geocode_location(
+                        city.strip(), last_seen.strip(), address.strip()
+                    )
                     new_case_details = RegisteredCases(
                         id=case_id,
                         submitted_by=user,
@@ -186,8 +189,8 @@ if user is not None:
                         birth_marks=birthmarks.strip(),
                         address=address.strip(),
                         city=city.strip() or None,
-                        latitude=geocode_location(last_seen, None, None)[0],
-                        longitude=geocode_location(last_seen, None, None)[1],
+                        latitude=map_latitude,
+                        longitude=map_longitude,
                         last_seen=last_seen.strip(),
                         description=description.strip() or None,
                         status="NF",
