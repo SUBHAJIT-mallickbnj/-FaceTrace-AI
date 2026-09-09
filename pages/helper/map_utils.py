@@ -106,7 +106,9 @@ def resolve_case_map_coordinate(
     latitude: float | None = None,
     longitude: float | None = None,
 ):
-    """Resolve a marker from the victim's last-seen location only."""
+    """Prefer stored coordinates, then geocode the victim's last-seen location."""
+    if latitude is not None and longitude is not None:
+        return float(latitude), float(longitude)
     return geocode_last_seen_location(last_seen) or CITY_COORDS["Unknown"]
 
 

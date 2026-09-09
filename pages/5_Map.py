@@ -34,7 +34,7 @@ elif st.session_state["login_status"]:
         st.stop()
 
     # Build map centered on India
-    m = folium.Map(location=[20.5937, 78.9629], zoom_start=5, tiles="CartoDB positron")
+    m = folium.Map(location=[20.5937, 78.9629], zoom_start=5, tiles="OpenStreetMap")
     seen_coordinates = {}
 
     for case_id, name, status, city, last_seen, address, latitude, longitude in cases:

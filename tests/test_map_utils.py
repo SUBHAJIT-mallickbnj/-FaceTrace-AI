@@ -20,11 +20,8 @@ class MapUtilsTests(unittest.TestCase):
         self.assertGreater(abs(second[0] - first[0]) + abs(second[1] - first[1]), 0.1)
         self.assertEqual(len(seen), 1)
 
-    def test_map_uses_last_seen_only(self):
-        with patch(
-            "pages.helper.map_utils.geocode_last_seen_location",
-            return_value=(22.5726, 88.3639),
-        ) as geocode:
+    def test_map_prefers_stored_coordinates(self):
+        with patch("pages.helper.map_utils.geocode_last_seen_location") as geocode:
             coords = resolve_case_map_coordinate(
                 "Kolkata",
                 "New Town, Kolkata",
@@ -33,8 +30,8 @@ class MapUtilsTests(unittest.TestCase):
                 77.5946,
             )
 
-        self.assertEqual(coords, (22.5726, 88.3639))
-        geocode.assert_called_once_with("New Town, Kolkata")
+        self.assertEqual(coords, (12.9716, 77.5946))
+        geocode.assert_not_called()
 
     def test_last_seen_geocoder_does_not_use_other_case_fields(self):
         response = MagicMock()

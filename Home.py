@@ -286,7 +286,7 @@ if st.session_state.get("authentication_status"):
             st.info("No cases registered yet. Add a location when registering a case.")
         else:
             m = folium.Map(
-                location=[20.5937, 78.9629], zoom_start=5, tiles="CartoDB positron"
+                location=[20.5937, 78.9629], zoom_start=5, tiles="OpenStreetMap"
             )
             seen_coordinates = {}
 
