@@ -288,9 +288,7 @@ def test_editing_last_seen_recalculates_registered_case_coordinates():
                 assert saved.last_seen == "Srinagar, Kashmir"
                 assert saved.latitude == 34.0837
                 assert saved.longitude == 74.7973
-            geocode.assert_called_with(
-                "Delhi", "Srinagar, Kashmir", "Connaught Place", "190001"
-            )
+            geocode.assert_called_with(None, "Srinagar, Kashmir", None, None)
 
         temp_engine.dispose()
 
@@ -323,7 +321,7 @@ def test_editing_last_seen_ignores_stale_registration_location_fields():
             db_queries.register_new_case(registered)
             db_queries.update_registered_case(
                 "stale-location-case",
-                {"last_seen": "Srinagar, Lal Chowk, 190001"},
+                {"name": "Updated Name", "last_seen": "Srinagar, Lal Chowk, 190001"},
             )
             with db_queries.Session(temp_engine) as session:
                 saved = session.get(RegisteredCases, "stale-location-case")

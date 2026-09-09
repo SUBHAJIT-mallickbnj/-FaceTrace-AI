@@ -549,7 +549,7 @@ def update_registered_case(case_id: str, fields: dict):
         if any(key in fields for key in ("address", "pincode", "last_seen", "city")):
             # An edited Last Seen value is authoritative; do not let stale
             # registration fields pull the marker back to the old location.
-            if set(fields) == {"last_seen"}:
+            if "last_seen" in fields:
                 case.latitude, case.longitude = geocode_location(
                     None, case.last_seen, None, None
                 )
