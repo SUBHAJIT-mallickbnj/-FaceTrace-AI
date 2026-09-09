@@ -2,6 +2,7 @@ import base64
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import MagicMock, patch
 from unittest.mock import patch
 
 import pytest
@@ -208,6 +209,32 @@ def test_configured_database_failure_does_not_fallback_to_sqlite():
         db_queries.database_url = original_url
 
 
+def test_database_initialization_runs_once_per_engine():
+    fake_engine = MagicMock()
+    fake_connection = fake_engine.connect.return_value.__enter__.return_value
+    original_engine = db_queries.engine
+    original_url = db_queries.database_url
+    original_initialized_engine_id = db_queries._initialized_engine_id
+    try:
+        db_queries.engine = fake_engine
+        db_queries.database_url = "sqlite:///test.db"
+        db_queries._initialized_engine_id = None
+        with patch.object(db_queries.RegisteredCases.__table__, "create"), patch.object(
+            db_queries.PublicSubmissions.__table__, "create"
+        ), patch.object(db_queries, "_migrate_db"), patch.object(
+            db_queries, "_backfill_image_data"
+        ):
+            db_queries.create_db()
+            db_queries.create_db()
+
+        assert fake_engine.connect.call_count == 1
+        fake_connection.execute.assert_called_once()
+    finally:
+        db_queries.engine = original_engine
+        db_queries.database_url = original_url
+        db_queries._initialized_engine_id = original_initialized_engine_id
+
+
 def test_public_submission_auto_confirms_matching_registered_case():
     with TemporaryDirectory() as tmpdir:
         temp_db = Path(tmpdir) / "test.db"
@@ -275,7 +302,7 @@ def test_editing_last_seen_recalculates_registered_case_coordinates():
         )
 
         with patch.object(db_queries, "engine", temp_engine), patch(
-            "pages.helper.db_queries.geocode_location",
+            "pages.helper.db_queries.geocode_last_seen_location",
             return_value=(34.0837, 74.7973),
         ) as geocode:
             db_queries.register_new_case(registered)
@@ -288,7 +315,7 @@ def test_editing_last_seen_recalculates_registered_case_coordinates():
                 assert saved.last_seen == "Srinagar, Kashmir"
                 assert saved.latitude == 34.0837
                 assert saved.longitude == 74.7973
-            geocode.assert_called_with(None, "Srinagar, Kashmir", None, None)
+            geocode.assert_called_with("Srinagar, Kashmir")
 
         temp_engine.dispose()
 
@@ -315,7 +342,7 @@ def test_editing_last_seen_ignores_stale_registration_location_fields():
         )
 
         with patch.object(db_queries, "engine", temp_engine), patch(
-            "pages.helper.db_queries.geocode_location",
+            "pages.helper.db_queries.geocode_last_seen_location",
             return_value=(34.0837, 74.7973),
         ) as geocode:
             db_queries.register_new_case(registered)
@@ -326,6 +353,6 @@ def test_editing_last_seen_ignores_stale_registration_location_fields():
             with db_queries.Session(temp_engine) as session:
                 saved = session.get(RegisteredCases, "stale-location-case")
                 assert (saved.latitude, saved.longitude) == (34.0837, 74.7973)
-            geocode.assert_called_with(None, "Srinagar, Lal Chowk, 190001", None, None)
+            geocode.assert_called_with("Srinagar, Lal Chowk, 190001")
 
         temp_engine.dispose()

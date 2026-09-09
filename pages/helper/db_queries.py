@@ -2,6 +2,7 @@ import sqlite3
 import uuid
 import os
 import base64
+import threading
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
@@ -14,7 +15,7 @@ import streamlit as st
 
 from pages.helper.data_models import RegisteredCases, PublicSubmissions
 from pages.helper.utils import get_database_path, get_resources_dir
-from pages.helper.map_utils import geocode_location
+from pages.helper.map_utils import geocode_last_seen_location, geocode_location
 from pages.helper.map_utils import normalize_location
 from pages.helper import image_store
 
@@ -38,7 +39,7 @@ def _get_database_url() -> str:
 
 
 def _normalize_database_url(configured_url: str) -> str:
-    """Normalize managed PostgreSQL URLs for psycopg and Streamlit Cloud."""
+    """Normalize PostgreSQL URLs for psycopg and serverless Streamlit apps."""
     if configured_url.startswith("postgres://"):
         configured_url = configured_url.replace("postgres://", "postgresql://", 1)
     if not configured_url.startswith("postgresql"):
@@ -50,6 +51,13 @@ def _normalize_database_url(configured_url: str) -> str:
 
     parsed = urlsplit(configured_url)
     query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    if parsed.hostname and parsed.hostname.endswith("pooler.supabase.com"):
+        # Supabase 5432 is session pooling with a small per-project client cap.
+        # Streamlit creates short-lived connections across multiple app workers,
+        # so use transaction pooling instead.
+        if parsed.port == 5432:
+            parsed = parsed._replace(netloc=parsed.netloc.rsplit(":", 1)[0] + ":6543")
+        query.setdefault("prepare_threshold", "0")
     query.setdefault("sslmode", "require")
     query.setdefault("connect_timeout", "10")
     return urlunsplit(parsed._replace(query=urlencode(query)))
@@ -69,26 +77,37 @@ def _create_engine(url: str):
 
 database_url = _get_database_url()
 engine = _create_engine(database_url)
+_database_init_lock = threading.Lock()
+_initialized_engine_id = None
 
 
 def create_db():
-    global database_url, engine
-    try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-        RegisteredCases.__table__.create(engine, checkfirst=True)
-        PublicSubmissions.__table__.create(engine, checkfirst=True)
-    except SQLAlchemyError as exc:
-        if not database_url.startswith("sqlite"):
-            raise RuntimeError(
-                "The configured DATABASE_URL is unavailable. Fix the same "
-                "PostgreSQL secret in both Streamlit apps; local SQLite fallback "
-                "is disabled to prevent public and admin data from diverging."
-            ) from exc
-        raise
-    # Add new columns to existing databases without dropping data.
-    _migrate_db()
-    _backfill_image_data()
+    """Initialize the active database once per process and engine instance."""
+    global database_url, engine, _initialized_engine_id
+    engine_id = id(engine)
+    if _initialized_engine_id == engine_id:
+        return
+
+    with _database_init_lock:
+        if _initialized_engine_id == engine_id:
+            return
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT 1"))
+            RegisteredCases.__table__.create(engine, checkfirst=True)
+            PublicSubmissions.__table__.create(engine, checkfirst=True)
+        except SQLAlchemyError as exc:
+            if not database_url.startswith("sqlite"):
+                raise RuntimeError(
+                    "The configured DATABASE_URL is unavailable. Fix the same "
+                    "PostgreSQL secret in both Streamlit apps; local SQLite fallback "
+                    "is disabled to prevent public and admin data from diverging."
+                ) from exc
+            raise
+        # Add new columns to existing databases without dropping data.
+        _migrate_db()
+        _backfill_image_data()
+        _initialized_engine_id = engine_id
 
 
 def _migrate_db():
@@ -550,9 +569,7 @@ def update_registered_case(case_id: str, fields: dict):
             # An edited Last Seen value is authoritative; do not let stale
             # registration fields pull the marker back to the old location.
             if "last_seen" in fields:
-                case.latitude, case.longitude = geocode_location(
-                    None, case.last_seen, None, None
-                )
+                case.latitude, case.longitude = geocode_last_seen_location(case.last_seen)
             else:
                 case.latitude, case.longitude = geocode_location(
                     case.city,
