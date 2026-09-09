@@ -86,7 +86,12 @@ _initialized_engine_id = None
 
 
 def _database_failure_detail(exc: Exception) -> str:
-    message = str(exc).lower()
+    messages = []
+    current = exc
+    while current is not None:
+        messages.append(str(current).lower())
+        current = current.__cause__ or current.__context__
+    message = " ".join(messages)
     if "max clients" in message or "too many connections" in message:
         return "Supabase connection limit reached; transaction pooling is required."
     if "password authentication failed" in message or "authentication failed" in message:
@@ -97,6 +102,8 @@ def _database_failure_detail(exc: Exception) -> str:
         return "Supabase connection timed out; verify the pooler host and port 6543."
     if "ssl" in message or "certificate" in message:
         return "Supabase SSL negotiation failed; DATABASE_URL must use sslmode=require."
+    if "port" in message and "6543" in message:
+        return "Supabase pooler port 6543 is unavailable; verify the project pooler is enabled."
     return "Check DATABASE_URL format, Supabase project status, and Streamlit secrets."
 
 
