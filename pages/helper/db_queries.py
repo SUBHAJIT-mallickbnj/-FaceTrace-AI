@@ -64,11 +64,13 @@ def _normalize_database_url(configured_url: str) -> str:
 
 
 def _create_engine(url: str):
+    connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {
+        # Supabase transaction poolers do not support prepared statements.
+        "prepare_threshold": 0,
+    }
     options = {
         "pool_pre_ping": True,
-        "connect_args": {"check_same_thread": False}
-        if url.startswith("sqlite")
-        else {},
+        "connect_args": connect_args,
     }
     if not url.startswith("sqlite"):
         options["poolclass"] = NullPool

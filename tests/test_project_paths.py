@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import numpy as np
 
-from pages.helper.db_queries import get_database_path
+from pages.helper.db_queries import _create_engine, _normalize_database_url, get_database_path
 from pages.helper.utils import (
     detect_all_faces,
     get_login_config_path,
@@ -13,6 +13,21 @@ from pages.helper.utils import (
 
 
 class ProjectPathTests(unittest.TestCase):
+    def test_postgres_engine_disables_prepared_statements_at_driver_level(self):
+        with patch("pages.helper.db_queries.create_engine") as create_engine:
+            _create_engine("postgresql+psycopg://user:password@host/db")
+
+        options = create_engine.call_args.kwargs
+        self.assertEqual(options["connect_args"]["prepare_threshold"], 0)
+
+    def test_supabase_pooler_uses_transaction_mode_for_streamlit(self):
+        url = _normalize_database_url(
+            "postgresql://user:password@aws-0-region.pooler.supabase.com:5432/db"
+        )
+
+        self.assertIn("@aws-0-region.pooler.supabase.com:6543/", url)
+        self.assertIn("prepare_threshold=0", url)
+
     def test_project_root_points_to_repo_root(self):
         root = get_project_root()
         self.assertTrue((root / "Home.py").exists())
