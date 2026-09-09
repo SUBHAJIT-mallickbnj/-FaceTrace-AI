@@ -1,5 +1,6 @@
 import inspect
 import json
+import time
 import urllib.request
 from pathlib import Path
 
@@ -134,21 +135,48 @@ def _ensure_model():
     if not get_model_path().exists():
         get_model_path().parent.mkdir(parents=True, exist_ok=True)
         with st.spinner("Downloading face landmarker model (one-time, ~30 MB)..."):
-            urllib.request.urlretrieve(_MODEL_URL, str(get_model_path()))
+            _download_model(_MODEL_URL, get_model_path())
 
 
 def _ensure_model_silent():
     if not get_model_path().exists():
         get_model_path().parent.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(_MODEL_URL, str(get_model_path()))
+        _download_model(_MODEL_URL, get_model_path())
 
 
 def _ensure_face_models():
     _FACE_MODEL_DIR.mkdir(parents=True, exist_ok=True)
     if not _FACE_DETECTOR_PATH.exists():
-        urllib.request.urlretrieve(_FACE_DETECTOR_URL, str(_FACE_DETECTOR_PATH))
+        _download_model(_FACE_DETECTOR_URL, _FACE_DETECTOR_PATH)
     if not _FACE_RECOGNIZER_PATH.exists():
-        urllib.request.urlretrieve(_FACE_RECOGNIZER_URL, str(_FACE_RECOGNIZER_PATH))
+        _download_model(_FACE_RECOGNIZER_URL, _FACE_RECOGNIZER_PATH)
+
+
+def _download_model(url: str, destination: Path):
+    """Download a model atomically so interrupted Cloud downloads are never reused."""
+    temporary_path = destination.with_suffix(destination.suffix + ".part")
+    last_error = None
+    for attempt in range(3):
+        try:
+            temporary_path.unlink(missing_ok=True)
+            request = urllib.request.Request(
+                url, headers={"User-Agent": "FaceTrace-AI/1.0"}
+            )
+            with urllib.request.urlopen(request, timeout=60) as response, open(
+                temporary_path, "wb"
+            ) as output:
+                while chunk := response.read(1024 * 1024):
+                    output.write(chunk)
+            if temporary_path.stat().st_size < 1024:
+                raise OSError("downloaded model is unexpectedly small")
+            temporary_path.replace(destination)
+            return
+        except Exception as exc:
+            last_error = exc
+            temporary_path.unlink(missing_ok=True)
+            if attempt < 2:
+                time.sleep(1)
+    raise RuntimeError(f"Unable to download face model: {last_error}") from last_error
 
 
 @st.cache_resource
@@ -291,7 +319,10 @@ def detect_all_faces(image: np.ndarray, max_faces: int = 5):
         except Exception as exc:
             detection_errors.append(str(exc))
     if not faces and detection_errors:
-        st.warning("Face detection is unavailable in this environment. Please try again with a clear, front-facing photo.")
+        st.warning(
+            "Face detection could not load its model. Please retry once; "
+            "if the problem continues, restart the Streamlit app."
+        )
     return faces
 
 
