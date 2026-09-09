@@ -132,6 +132,22 @@ SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD
 ```
 The complainant's email entered during case registration is used as the recipient.
 
+### Supabase Streamlit Cloud configuration
+
+For both the admin and public Streamlit apps, add the same database password to
+**Settings > Secrets**:
+
+```
+SUPABASE_DB_PASSWORD = "your-supabase-database-password"
+```
+
+The application generates the transaction-pooler URL for the `facetrace-ai`
+project in `ap-northeast-1` automatically. This uses
+`aws-0-ap-northeast-1.pooler.supabase.com:6543`, disables prepared statements,
+and keeps both portals on the same PostgreSQL database. A manually supplied
+`DATABASE_URL` is still supported, but it must use the same transaction pooler
+host and port.
+
 ### Recommended: Independent Google Drive image backup
 
 Images are stored in the shared PostgreSQL database and, when configured, in a
@@ -145,6 +161,18 @@ GOOGLE_DRIVE_CLIENT_SECRET = "your-oauth-client-secret"
 GOOGLE_DRIVE_REFRESH_TOKEN = "your-oauth-refresh-token"
 GOOGLE_DRIVE_FOLDER_ID = "your-private-drive-folder-id"
 ```
+
+If the app reports `invalid_grant` or says the token has expired or been revoked,
+the Google OAuth refresh token must be replaced. Create or regenerate an OAuth
+client in Google Cloud, authorize it with the `https://www.googleapis.com/auth/drive.file`
+scope, then update `GOOGLE_DRIVE_REFRESH_TOKEN` in the deployed app's
+**Settings > Secrets**. Keep the client ID, client secret, folder ID, and refresh
+token from the same OAuth client, then restart or redeploy the Streamlit app.
+
+The database save is independent of the Drive backup: a Drive token failure does
+not delete the image already stored in PostgreSQL. For a server-to-server setup,
+you can use `GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON` instead, share the target Drive
+folder with the service-account email, and remove the three OAuth values.
 
 New admin and public images are written to PostgreSQL and Google Drive. Case metadata
 is also written as `case-data/registered-<case-id>.json` or

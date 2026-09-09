@@ -3,7 +3,11 @@ from unittest.mock import patch
 
 import numpy as np
 
-from pages.helper.db_queries import _create_engine, _normalize_database_url, get_database_path
+from pages.helper.db_queries import (
+    _create_engine,
+    _normalize_database_url,
+    get_database_path,
+)
 from pages.helper.utils import (
     detect_all_faces,
     get_login_config_path,
@@ -13,6 +17,25 @@ from pages.helper.utils import (
 
 
 class ProjectPathTests(unittest.TestCase):
+    def test_generated_supabase_url_uses_transaction_pooler(self):
+        with patch("pages.helper.db_queries.st.secrets") as secrets:
+            secrets.get.side_effect = lambda name, default=None: {
+                "SUPABASE_DB_PASSWORD": "p@ss/word",
+                "SUPABASE_PROJECT_REF": "juimizsbqheuvxfphutx",
+                "SUPABASE_REGION": "ap-northeast-1",
+            }.get(name, default)
+
+            from pages.helper.db_queries import _get_configured_database_url
+
+            url = _get_configured_database_url()
+
+        self.assertIn("postgres.juimizsbqheuvxfphutx:", url)
+        self.assertIn(
+            "@aws-0-ap-northeast-1.pooler.supabase.com:6543/",
+            url,
+        )
+        self.assertIn("prepare_threshold=0", url)
+
     def test_postgres_engine_disables_prepared_statements_at_driver_level(self):
         with patch("pages.helper.db_queries.create_engine") as create_engine:
             _create_engine("postgresql+psycopg://user:password@host/db")

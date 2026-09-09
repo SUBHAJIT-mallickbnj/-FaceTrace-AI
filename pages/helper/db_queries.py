@@ -5,7 +5,7 @@ import base64
 import threading
 import time
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlsplit, urlunsplit
 
 from sqlalchemy.exc import IntegrityError as SQLAlchemyIntegrityError
 from sqlalchemy.exc import SQLAlchemyError
@@ -22,6 +22,17 @@ from pages.helper import image_store
 
 def _get_configured_database_url() -> str | None:
     try:
+        password = st.secrets.get("SUPABASE_DB_PASSWORD")
+        project_ref = st.secrets.get(
+            "SUPABASE_PROJECT_REF", "juimizsbqheuvxfphutx"
+        )
+        region = st.secrets.get("SUPABASE_REGION", "ap-northeast-1")
+        if password:
+            return _normalize_database_url(
+                "postgresql://"
+                f"postgres.{project_ref}:{quote(str(password), safe='')}@"
+                f"aws-0-{region}.pooler.supabase.com:6543/postgres"
+            )
         configured_url = st.secrets.get("DATABASE_URL")
     except Exception:
         configured_url = None
