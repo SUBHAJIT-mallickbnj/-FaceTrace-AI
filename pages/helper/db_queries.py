@@ -546,15 +546,20 @@ def update_registered_case(case_id: str, fields: dict):
         ).one()
         for key, value in fields.items():
             setattr(case, key, value)
-        if any(
-            key in fields for key in ("address", "pincode", "last_seen", "city")
-        ):
-            case.latitude, case.longitude = geocode_location(
-                case.city,
-                case.last_seen,
-                case.address,
-                case.pincode,
-            )
+        if any(key in fields for key in ("address", "pincode", "last_seen", "city")):
+            # An edited Last Seen value is authoritative; do not let stale
+            # registration fields pull the marker back to the old location.
+            if set(fields) == {"last_seen"}:
+                case.latitude, case.longitude = geocode_location(
+                    None, case.last_seen, None, None
+                )
+            else:
+                case.latitude, case.longitude = geocode_location(
+                    case.city,
+                    case.last_seen,
+                    case.address,
+                    case.pincode,
+                )
         session.add(case)
         session.commit()
         session.refresh(case)

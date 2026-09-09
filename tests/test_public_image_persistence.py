@@ -293,3 +293,41 @@ def test_editing_last_seen_recalculates_registered_case_coordinates():
             )
 
         temp_engine.dispose()
+
+
+def test_editing_last_seen_ignores_stale_registration_location_fields():
+    with TemporaryDirectory() as tmpdir:
+        temp_db = Path(tmpdir) / "test.db"
+        temp_engine = create_engine(f"sqlite:///{temp_db}")
+        SQLModel.metadata.create_all(temp_engine)
+        registered = RegisteredCases(
+            id="stale-location-case",
+            submitted_by="admin",
+            name="Stale Location Test",
+            complainant_name="Family",
+            complainant_mobile="1234567890",
+            adhaar_card="123456789012",
+            last_seen="Delhi",
+            address="Old Delhi address",
+            pincode="110001",
+            city="Delhi",
+            face_mesh="[]",
+            status="NF",
+            birth_marks="",
+        )
+
+        with patch.object(db_queries, "engine", temp_engine), patch(
+            "pages.helper.db_queries.geocode_location",
+            return_value=(34.0837, 74.7973),
+        ) as geocode:
+            db_queries.register_new_case(registered)
+            db_queries.update_registered_case(
+                "stale-location-case",
+                {"last_seen": "Srinagar, Lal Chowk, 190001"},
+            )
+            with db_queries.Session(temp_engine) as session:
+                saved = session.get(RegisteredCases, "stale-location-case")
+                assert (saved.latitude, saved.longitude) == (34.0837, 74.7973)
+            geocode.assert_called_with(None, "Srinagar, Lal Chowk, 190001", None, None)
+
+        temp_engine.dispose()
