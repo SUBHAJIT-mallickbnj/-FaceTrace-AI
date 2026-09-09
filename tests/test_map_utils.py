@@ -43,6 +43,15 @@ class MapUtilsTests(unittest.TestCase):
         self.assertIn("Ranchi%2C+India", request.full_url)
         self.assertNotIn("Baguihati", request.full_url)
 
+    def test_srinagar_uses_local_coordinate_when_geocoder_is_unavailable(self):
+        with patch(
+            "pages.helper.map_utils.urlopen",
+            side_effect=OSError("geocoder unavailable"),
+        ):
+            coords = geocode_last_seen_location("SRINAGAR, KASHMIR, INDIA")
+
+        self.assertEqual(coords, (34.0837, 74.7973))
+
 
 if __name__ == "__main__":
     unittest.main()

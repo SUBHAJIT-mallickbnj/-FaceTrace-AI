@@ -33,6 +33,7 @@ CITY_COORDS = {
     "Dehradun": (30.3165, 78.0322), "Haridwar": (29.9457, 78.1642),
     "Rishikesh": (30.0869, 78.2676), "Shimla": (31.1048, 77.1732),
     "Bathinda": (30.2110, 74.9455), "Unknown": (20.5937, 78.9629),
+    "Srinagar": (34.0837, 74.7973),
 }
 
 CITY_ALIASES = {
@@ -40,6 +41,8 @@ CITY_ALIASES = {
     "bubaneswar": "Bhubaneswar",
     "bhubaneshwar": "Bhubaneswar",
     "bhubaneswar": "Bhubaneswar",
+    "srinagar kashmir": "Srinagar",
+    "srinagar": "Srinagar",
 }
 
 
