@@ -251,3 +251,45 @@ def test_public_submission_auto_confirms_matching_registered_case():
                 assert saved_public.status == "F"
 
         temp_engine.dispose()
+
+
+def test_editing_last_seen_recalculates_registered_case_coordinates():
+    with TemporaryDirectory() as tmpdir:
+        temp_db = Path(tmpdir) / "test.db"
+        temp_engine = create_engine(f"sqlite:///{temp_db}")
+        SQLModel.metadata.create_all(temp_engine)
+        registered = RegisteredCases(
+            id="editable-map-case",
+            submitted_by="admin",
+            name="Map Test",
+            complainant_name="Family",
+            complainant_mobile="1234567890",
+            adhaar_card="123456789012",
+            last_seen="Delhi",
+            address="Connaught Place",
+            pincode="110001",
+            city="Delhi",
+            face_mesh="[]",
+            status="NF",
+            birth_marks="",
+        )
+
+        with patch.object(db_queries, "engine", temp_engine), patch(
+            "pages.helper.db_queries.geocode_location",
+            return_value=(34.0837, 74.7973),
+        ) as geocode:
+            db_queries.register_new_case(registered)
+            db_queries.update_registered_case(
+                "editable-map-case",
+                {"last_seen": "Srinagar, Kashmir", "pincode": "190001"},
+            )
+            with db_queries.Session(temp_engine) as session:
+                saved = session.get(RegisteredCases, "editable-map-case")
+                assert saved.last_seen == "Srinagar, Kashmir"
+                assert saved.latitude == 34.0837
+                assert saved.longitude == 74.7973
+            geocode.assert_called_with(
+                "Delhi", "Srinagar, Kashmir", "Connaught Place", "190001"
+            )
+
+        temp_engine.dispose()

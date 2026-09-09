@@ -14,6 +14,7 @@ import streamlit as st
 
 from pages.helper.data_models import RegisteredCases, PublicSubmissions
 from pages.helper.utils import get_database_path, get_resources_dir
+from pages.helper.map_utils import geocode_location
 from pages.helper.map_utils import normalize_location
 from pages.helper import image_store
 
@@ -545,6 +546,15 @@ def update_registered_case(case_id: str, fields: dict):
         ).one()
         for key, value in fields.items():
             setattr(case, key, value)
+        if any(
+            key in fields for key in ("address", "pincode", "last_seen", "city")
+        ):
+            case.latitude, case.longitude = geocode_location(
+                case.city,
+                case.last_seen,
+                case.address,
+                case.pincode,
+            )
         session.add(case)
         session.commit()
         session.refresh(case)
